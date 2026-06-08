@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>呪文帳 Craft — タグを選ぶだけで、プロンプト完成。</title>
+<meta name="description" content="Stable Diffusionのプロンプト作りをもっとスマートに。日本語タグを選ぶだけで英語プロンプトを自動生成。インストール不要・完全ローカル動作。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white: #ffffff;
+  --off: #f8f7f5;
+  --off2: #f0ede8;
+  --ink: #111318;
+  --ink2: #2a2d35;
+  --muted: #8b8d96;
+  --accent: #ff4d1c;
+  --accent2: #4f46e5;
+  --accent-light: #fff2ee;
+  --border: rgba(17,19,24,0.08);
+  --shadow-sm: 0 2px 8px rgba(17,19,24,0.06);
+  --shadow-md: 0 8px 32px rgba(17,19,24,0.1);
+  --shadow-lg: 0 24px 64px rgba(17,19,24,0.12);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--white);
+  color: var(--ink);
+  font-family: 'Noto Sans JP', sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 48px; height: 64px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 17px; letter-spacing: -.4px; color: var(--ink);
+  text-decoration: none; display: flex; align-items: center; gap: 10px;
+}
+.logo-mark {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1;
+}
+.nav-links { display: flex; align-items: center; gap: 36px; }
+.nav-links a {
+  font-size: 13px; font-weight: 700; color: var(--muted);
+  text-decoration: none; transition: color .18s; letter-spacing: .3px;
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 22px; border-radius: 10px;
+  background: var(--ink); color: #fff;
+  font-size: 13px; font-weight: 700; text-decoration: none;
+  transition: background .18s, transform .18s;
+}
+.nav-cta:hover { background: var(--ink2); transform: translateY(-1px); }
+
+/* ─── HERO ─── */
+.hero {
+  min-height: 100vh; padding: 0;
+  display: grid; grid-template-columns: 1fr 1fr;
+  position: relative; overflow: hidden;
+  background: var(--ink);
+}
+
+/* 左：テキストエリア */
+.hero-text {
+  padding: 160px 56px 100px;
+  display: flex; flex-direction: column; justify-content: center;
+  position: relative; z-index: 2;
+  background: var(--white);
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
+}
+
+/* 右：ビジュアルエリア */
+.hero-visual {
+  position: relative; overflow: hidden;
+}
+.hero-visual-img {
+  width: 100%; height: 100%; object-fit: cover;
+  display: block;
+}
+/* プレースホルダー（画像なし時） */
+.hero-visual-placeholder {
+  width: 100%; height: 100%; min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  background: linear-gradient(135deg, #1a1040 0%, #0d1525 50%, #1a0d20 100%);
+  color: rgba(255,255,255,.25); text-align: center; padding: 40px;
+}
+.hero-visual-placeholder .ph-icon { font-size: 48px; opacity: .4; }
+.hero-visual-placeholder .ph-title { font-size: 14px; font-weight: 700; letter-spacing: 1px; }
+.hero-visual-placeholder .ph-prompt {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.8;
+  max-width: 320px; background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08); border-radius: 10px;
+  padding: 14px 16px; text-align: left; color: rgba(255,255,255,.35);
+}
+.hero-visual-placeholder .ph-prompt strong {
+  display: block; color: rgba(129,140,248,.7); font-size: 9px;
+  letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px;
+}
+/* 画像上のグラデオーバーレイ */
+.hero-visual::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to right, rgba(255,255,255,.08) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+/* 背景グリッド（テキスト側のみ） */
+.hero-text::before {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 100% 100% at 0% 50%, black 30%, transparent 80%);
+}
+
+@media (max-width: 768px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-text { clip-path: none; padding: 120px 20px 60px; }
+  .hero-visual { min-height: 60vw; }
+  .hero-visual-placeholder { min-height: 60vw; }
+}
+
+/* アクセントサークル（テキスト側） */
+.hero-circle {
+  position: absolute; right: -40px; bottom: -80px;
+  width: 300px; height: 300px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,77,28,.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-circle2 { display: none; }
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 2.5px;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 28px;
+  opacity: 0; animation: fadeUp .5s .05s forwards;
+}
+.hero-eyebrow-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .5; transform: scale(.8); }
+}
+
+.hero h1 {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(48px, 7.5vw, 100px);
+  line-height: 1.0; letter-spacing: -3px;
+  max-width: 860px; color: var(--ink);
+  opacity: 0; animation: fadeUp .6s .1s forwards;
+}
+.hero h1 .line2 {
+  display: block;
+  background: linear-gradient(90deg, var(--accent), #ff8c42);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.hero-sub {
+  font-size: 18px; color: var(--muted); line-height: 1.8;
+  max-width: 500px; margin-top: 32px; font-weight: 500;
+  opacity: 0; animation: fadeUp .6s .2s forwards;
+}
+
+.hero-actions {
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 48px; flex-wrap: wrap;
+  opacity: 0; animation: fadeUp .6s .3s forwards;
+}
+.btn-hero-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 36px; border-radius: 12px;
+  background: var(--accent); color: #fff;
+  font-size: 15px; font-weight: 700; text-decoration: none;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 4px 20px rgba(255,77,28,.3);
+}
+.btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,77,28,.4); }
+.btn-hero-primary .arr { transition: transform .2s; }
+.btn-hero-primary:hover .arr { transform: translateX(4px); }
+.btn-hero-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 16px 28px; border-radius: 12px;
+  border: 1.5px solid var(--border); color: var(--ink);
+  font-size: 15px; font-weight: 700; text-decoration: none;
+  transition: border-color .2s, background .2s;
+  background: var(--white);
+}
+.btn-hero-secondary:hover { border-color: var(--ink); background: var(--off); }
+
+.hero-meta {
+  display: flex; align-items: center; gap: 24px;
+  margin-top: 32px;
+  opacity: 0; animation: fadeUp .6s .4s forwards;
+}
+.hero-price-tag {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  padding: 8px 18px; border-radius: 999px;
+  background: var(--off); border: 1px solid var(--border);
+}
+.hero-price-tag .yen { font-size: 13px; color: var(--muted); font-weight: 700; }
+.hero-price-tag .amount { font-size: 22px; font-weight: 900; font-family: 'Syne', sans-serif; }
+.hero-price-tag .note { font-size: 12px; color: var(--muted); margin-left: 2px; }
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 999px;
+  background: var(--accent-light); color: var(--accent);
+  font-size: 12px; font-weight: 700;
+}
+
+/* ─── DEMO STRIP ─── */
+.demo-strip {
+  background: var(--off); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 80px 48px;
+}
+.demo-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1.2fr; gap: 64px; align-items: center;
+}
+.demo-text-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--accent2); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.demo-text-eyebrow::before { content: ''; display: block; width: 20px; height: 2px; background: var(--accent2); }
+.demo-title {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(28px, 3.5vw, 48px); letter-spacing: -1.5px; line-height: 1.15;
+  margin-bottom: 20px;
+}
+.demo-desc { font-size: 15px; color: var(--muted); line-height: 1.8; }
+
+/* モックUI */
+.mock-window {
+  background: var(--white);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.mock-titlebar {
+  background: var(--off); padding: 12px 16px;
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.mock-dot { width: 12px; height: 12px; border-radius: 50%; }
+.mock-dot-r { background: #ff5f57; }
+.mock-dot-y { background: #febc2e; }
+.mock-dot-g { background: #28c840; }
+.mock-tabs {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  background: var(--white);
+}
+.mock-tab {
+  padding: 10px 16px; font-size: 11px; font-weight: 700;
+  color: var(--muted); border-bottom: 2px solid transparent;
+}
+.mock-tab.on { color: var(--accent2); border-bottom-color: var(--accent2); }
+.mock-body { padding: 16px; }
+.mock-cat { margin-bottom: 14px; }
+.mock-cat-hd {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--off); margin-bottom: 8px;
+}
+.mock-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.mock-cat-label { font-size: 11px; font-weight: 700; }
+.mock-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 4px; }
+.mock-chip {
+  padding: 5px 12px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  border: 1.5px solid var(--border); background: var(--white); color: var(--muted);
+}
+.mock-chip.sel-pink { border-color: rgba(244,114,182,.5); background: rgba(244,114,182,.08); color: #db2777; }
+.mock-chip.sel-ind  { border-color: rgba(99,102,241,.5);  background: rgba(99,102,241,.08);  color: #4f46e5; }
+.mock-chip.sel-teal { border-color: rgba(20,184,166,.5);  background: rgba(20,184,166,.08);  color: #0d9488; }
+.mock-output {
+  background: var(--off); border: 1px solid var(--border);
+  border-radius: 10px; margin-top: 4px; overflow: hidden;
+}
+.mock-output-hd {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px; border-bottom: 1px solid var(--border);
+  background: rgba(20,184,166,.04);
+}
+.mock-output-hd-label { font-size: 10px; font-weight: 700; color: #0d9488; }
+.mock-copy-btn {
+  font-size: 10px; font-weight: 700; color: #0d9488;
+  border: 1px solid rgba(20,184,166,.4); border-radius: 999px;
+  padding: 3px 10px;
+}
+.mock-output-text {
+  padding: 10px 12px; font-size: 10px; line-height: 1.8;
+  font-family: 'JetBrains Mono', monospace; color: var(--muted);
+  word-break: break-all;
+}
+
+/* screenshot placeholder */
+.ss-placeholder {
+  margin-top: 16px; border-radius: 10px; overflow: hidden;
+  border: 2px dashed var(--border); padding: 24px;
+  text-align: center; color: var(--muted); font-size: 12px; font-weight: 700;
+  background: var(--white);
+}
+
+/* ─── FEATURES ─── */
+.features {
+  max-width: 1100px; margin: 0 auto; padding: 120px 48px;
+}
+.section-eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--accent2); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-eyebrow::before { content: ''; display: block; width: 20px; height: 2px; background: var(--accent2); }
+.section-title {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(32px, 4.5vw, 60px); line-height: 1.1; letter-spacing: -2px;
+  margin-bottom: 64px;
+}
+.feat-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+.feat-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 20px; padding: 36px 32px;
+  transition: transform .25s, box-shadow .25s;
+  position: relative; overflow: hidden;
+}
+.feat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.feat-card::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transform: scaleX(0); transition: transform .3s; transform-origin: left;
+}
+.feat-card:hover::after { transform: scaleX(1); }
+.feat-icon-wrap {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--off); display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 20px;
+  border: 1px solid var(--border);
+}
+.feat-title {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 18px; letter-spacing: -.4px; margin-bottom: 10px;
+}
+.feat-desc { font-size: 13px; color: var(--muted); line-height: 1.8; }
+
+/* ─── HOW ─── */
+.how {
+  background: var(--ink); padding: 120px 48px;
+  position: relative; overflow: hidden;
+}
+.how-grid-bg {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.how-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+.how .section-eyebrow { color: #fb923c; }
+.how .section-eyebrow::before { background: #fb923c; }
+.how .section-title { color: #fff; margin-bottom: 72px; }
+.steps {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+  border: 1px solid rgba(255,255,255,.08); border-radius: 20px; overflow: hidden;
+}
+.step {
+  padding: 40px 36px;
+  border-right: 1px solid rgba(255,255,255,.08);
+  position: relative;
+}
+.step:last-child { border-right: none; }
+.step-num {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 13px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(255,255,255,.45); margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.step-num::before {
+  content: attr(data-n);
+  width: 28px; height: 28px; border-radius: 8px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: rgba(255,255,255,.5);
+}
+.step-title {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 22px; color: #fff; margin-bottom: 12px; letter-spacing: -.5px;
+}
+.step-desc { font-size: 14px; color: rgba(255,255,255,.7); line-height: 1.8; }
+.step-chip {
+  display: inline-block; margin-top: 20px;
+  padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.step-chip-orange { background: rgba(251,146,60,.12); color: #fb923c; }
+.step-chip-indigo { background: rgba(129,140,248,.12); color: #818cf8; }
+.step-chip-teal   { background: rgba(52,211,153,.12);  color: #34d399; }
+
+/* ─── PRICE / SPECS ─── */
+.price-section {
+  max-width: 1100px; margin: 0 auto; padding: 120px 48px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start;
+}
+.price-card {
+  background: var(--ink); border-radius: 24px; padding: 48px;
+  position: relative; overflow: hidden;
+}
+.price-card::before {
+  content: ''; position: absolute; top: -60px; right: -60px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,77,28,.2), transparent 70%);
+}
+.price-label {
+  font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(255,255,255,.55); margin-bottom: 12px;
+}
+.price-amount {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 72px; color: #fff; line-height: 1; letter-spacing: -3px;
+}
+.price-amount sup { font-size: 28px; vertical-align: super; letter-spacing: 0; }
+.price-note { font-size: 13px; color: rgba(255,255,255,.55); margin-top: 8px; }
+.price-features { margin-top: 32px; display: flex; flex-direction: column; gap: 12px; }
+.price-feature {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 14px; color: rgba(255,255,255,.7);
+}
+.price-feature::before {
+  content: '✓'; width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0;
+  background: rgba(255,77,28,.2); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 900;
+}
+.price-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 36px; padding: 16px; border-radius: 12px;
+  background: var(--accent); color: #fff;
+  font-size: 15px; font-weight: 700; text-decoration: none;
+  transition: background .2s, transform .2s;
+  box-shadow: 0 4px 20px rgba(255,77,28,.4);
+}
+.price-btn:hover { background: #e8400f; transform: translateY(-2px); }
+
+.specs-list { display: flex; flex-direction: column; }
+.spec-row {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 20px 0; border-bottom: 1px solid var(--border);
+}
+.spec-row:first-child { border-top: 1px solid var(--border); }
+.spec-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: var(--off); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.spec-label { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+.spec-val { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* ─── CTA ─── */
+.cta-section {
+  background: var(--off); border-top: 1px solid var(--border);
+  padding: 120px 48px; text-align: center; position: relative; overflow: hidden;
+}
+.cta-section::before {
+  content: '呪文帳';
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 280px; white-space: nowrap;
+  color: transparent; -webkit-text-stroke: 1px rgba(17,19,24,0.04);
+  pointer-events: none; user-select: none; letter-spacing: -8px;
+}
+.cta-title {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(36px, 5.5vw, 72px); line-height: 1.1; letter-spacing: -2px;
+  position: relative; z-index: 1; margin-bottom: 20px;
+}
+.cta-title span { color: var(--accent); }
+.cta-sub {
+  font-size: 17px; color: var(--muted); max-width: 460px;
+  margin: 0 auto 48px; line-height: 1.7; position: relative; z-index: 1;
+}
+.btn-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 18px 44px; border-radius: 14px;
+  background: var(--ink); color: #fff;
+  font-size: 16px; font-weight: 700; text-decoration: none;
+  position: relative; z-index: 1;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 8px 32px rgba(17,19,24,0.18);
+}
+.btn-cta:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(17,19,24,0.24); }
+.btn-cta .arr { transition: transform .2s; }
+.btn-cta:hover .arr { transform: translateX(4px); }
+
+/* ─── FOOTER ─── */
+footer {
+  background: var(--ink); padding: 40px 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 16px;
+}
+.footer-logo {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;
+}
+.footer-logo .mark {
+  width: 24px; height: 24px; border-radius: 6px;
+  background: var(--accent); font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { font-size: 12px; color: rgba(255,255,255,.55); text-decoration: none; transition: color .2s; }
+.footer-links a:hover { color: rgba(255,255,255,.7); }
+.footer-copy { font-size: 12px; color: rgba(255,255,255,.45); }
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: none; }
+}
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .65s, transform .65s; }
+.reveal.visible { opacity: 1; transform: none; }
+.delay-1 { transition-delay: .1s; }
+.delay-2 { transition-delay: .2s; }
+.delay-3 { transition-delay: .3s; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  nav { padding: 0 20px; }
+  .nav-links { display: none; }
+  .hero { padding: 110px 20px 80px; }
+  .hero h1 { letter-spacing: -2px; }
+  .demo-strip { padding: 60px 20px; }
+  .demo-inner { grid-template-columns: 1fr; gap: 40px; }
+  .features { padding: 80px 20px; }
+  .feat-grid { grid-template-columns: 1fr; gap: 12px; }
+  .how { padding: 80px 20px; }
+  .steps { grid-template-columns: 1fr; border-radius: 16px; }
+  .step { border-right: none; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .step:last-child { border-bottom: none; }
+  .price-section { grid-template-columns: 1fr; padding: 80px 20px; gap: 40px; }
+  .cta-section { padding: 80px 20px; }
+  footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
+}
+
+  /* ── GALLERY ── */
+  .gallery-section {
+    background: var(--ink); padding: 100px 48px;
+  }
+  .gallery-inner { max-width: 1100px; margin: 0 auto; }
+  .gallery-header { margin-bottom: 48px; }
+  .gallery-header .section-eyebrow { color: #fb923c; }
+  .gallery-header .section-eyebrow::before { background: #fb923c; }
+  .gallery-title {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(32px, 5vw, 60px); line-height: 1.1;
+    letter-spacing: -2px; color: #fff; margin-bottom: 12px;
+  }
+  .gallery-title span { color: #fb923c; }
+  .gallery-sub { font-size: 14px; color: rgba(255,255,255,.6); }
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 12px;
+  }
+  .gallery-item {
+    border-radius: 16px; overflow: hidden;
+    aspect-ratio: 3/4; position: relative;
+    background: #0f1525;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .gallery-item img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform .4s;
+  }
+  .gallery-item:hover img { transform: scale(1.04); }
+  .gallery-item-large {
+    grid-row: 1 / 3;
+    aspect-ratio: auto;
+  }
+  .gallery-placeholder {
+    width: 100%; height: 100%; min-height: 220px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px;
+    padding: 20px; text-align: center;
+    background: linear-gradient(135deg, #1a1040, #0d1525);
+  }
+  .gp-icon { font-size: 32px; opacity: .5; }
+  .gp-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    color: rgba(255,255,255,.25); text-transform: uppercase;
+  }
+  .gp-prompt {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; line-height: 1.8;
+    color: rgba(255,255,255,.25); background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06); border-radius: 8px;
+    padding: 10px 12px; text-align: left; max-width: 260px;
+    display: none;
+  }
+  .gallery-item:hover .gp-prompt { display: block; }
+  .gp-prompt strong {
+    display: block; color: rgba(251,146,60,.6); font-size: 8px;
+    letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .gallery-note {
+    font-size: 11px; color: rgba(255,255,255,.25);
+    text-align: center; margin-top: 20px;
+  }
+  @media (max-width: 768px) {
+    .gallery-section { padding: 60px 20px; }
+    .gallery-grid { grid-template-columns: 1fr 1fr; }
+    .gallery-item-large { grid-row: auto; aspect-ratio: 3/4; }
+    .gallery-item { aspect-ratio: 3/4; }
+  }
+
+  /* ── GUIDE SECTION ── */
+  .guide-section {
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    padding: 120px 48px;
+  }
+  .guide-inner { max-width: 1100px; margin: 0 auto; }
+  .guide-tabs {
+    display: flex; gap: 8px; margin-bottom: 40px; flex-wrap: wrap;
+  }
+  .guide-tab {
+    padding: 9px 20px; border-radius: 999px; font-size: 13px; font-weight: 700;
+    border: 1.5px solid var(--border); color: var(--muted);
+    cursor: pointer; transition: all .18s; background: var(--white);
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .guide-tab.active {
+    background: var(--ink); color: #fff; border-color: var(--ink);
+  }
+  .guide-panel { display: none; }
+  .guide-panel.active { display: block; }
+  .guide-steps { display: flex; flex-direction: column; gap: 16px; }
+  .guide-step {
+    display: flex; gap: 20px; align-items: flex-start;
+    padding: 24px; border-radius: 16px;
+    border: 1px solid var(--border); background: var(--off);
+    transition: box-shadow .2s;
+  }
+  .guide-step:hover { box-shadow: var(--shadow-sm); }
+  .guide-step-num {
+    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+    background: var(--ink); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px;
+  }
+  .guide-step-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .guide-step-desc { font-size: 13px; color: var(--muted); line-height: 1.75; }
+  .guide-step-tag {
+    display: inline-block; margin-top: 10px;
+    padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(79,70,229,.08); color: var(--accent2);
+    border: 1px solid rgba(79,70,229,.15);
+  }
+  .guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 768px) { .guide-grid { grid-template-columns: 1fr; } .guide-section { padding: 80px 20px; } }
+  .guide-card {
+    padding: 24px; border-radius: 16px;
+    border: 1px solid var(--border); background: var(--off);
+  }
+  .guide-card-title {
+    font-size: 14px; font-weight: 900; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .guide-card-title .ico {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: var(--white); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+  }
+  .guide-list { display: flex; flex-direction: column; gap: 10px; }
+  .guide-list-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 13px; line-height: 1.65;
+  }
+  .guide-list-item::before {
+    content: '✓'; flex-shrink: 0;
+    width: 18px; height: 18px; border-radius: 5px;
+    background: rgba(79,70,229,.1); color: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 900; margin-top: 1px;
+  }
+  .shortcut-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  @media (max-width: 768px) { .shortcut-grid { grid-template-columns: 1fr; } }
+  .sc-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-radius: 10px;
+    background: var(--off); border: 1px solid var(--border); gap: 12px;
+  }
+  .sc-desc { font-size: 12px; color: var(--muted); flex: 1; }
+  .sc-keys { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .lp-kbd {
+    display: inline-block; padding: 4px 9px; border-radius: 6px;
+    background: var(--white); border: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+    box-shadow: 0 2px 0 var(--border);
+  }
+  .faq-list { display: flex; flex-direction: column; gap: 0; }
+  .faq-item {
+    padding: 20px 0; border-bottom: 1px solid var(--border);
+  }
+  .faq-item:first-child { border-top: 1px solid var(--border); }
+  .faq-q { font-size: 14px; font-weight: 700; margin-bottom: 8px; display: flex; gap: 10px; }
+  .faq-q::before { content: 'Q'; color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 800; flex-shrink: 0; }
+  .faq-a { font-size: 13px; color: var(--muted); line-height: 1.75; display: flex; gap: 10px; }
+  .faq-a::before { content: 'A'; color: var(--accent2); font-family: 'Syne', sans-serif; font-weight: 800; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="logo-mark">📖</div>
+    呪文帳 Craft
+  </a>
+  <div class="nav-links">
+    <a href="#features">機能</a>
+    <a href="#how">使い方</a>
+    <a href="#guide">ガイド</a>
+    <a href="#price">価格</a>
+  </div>
+  <a class="nav-cta" href="https://booth.pm" target="_blank">BOOTHで購入 →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <!-- 左：テキスト -->
+  <div class="hero-text">
+    <div class="hero-circle"></div>
+    <div class="hero-circle2"></div>
+    <div class="hero-eyebrow">
+      <div class="hero-eyebrow-dot"></div>
+      Stable Diffusion Tool
+    </div>
+    <h1>タグを選ぶだけで、<span class="line2">プロンプト完成。</span></h1>
+    <p class="hero-sub">英語力ゼロで、プロ級の呪文。日本語タグをクリックするだけで、高精度な英語プロンプトを自動生成。もう呪文を暗記しなくていい。</p>
+    <div class="hero-actions">
+      <a class="btn-hero-primary" href="https://booth.pm" target="_blank">
+        BOOTHで購入する <span class="arr">→</span>
+      </a>
+      <a class="btn-hero-secondary" href="#how">使い方を見る</a>
+    </div>
+    <div class="hero-meta">
+      <div class="hero-price-tag">
+        <span class="yen">¥</span>
+        <span class="amount">1,000</span>
+        <span class="note">買い切り</span>
+      </div>
+      <div class="hero-badge">🎉 アップデート永久無料</div>
+      <div class="hero-badge" style="background:rgba(79,70,229,.08);color:var(--accent2);border:1px solid rgba(79,70,229,.15)">🇯🇵 英語力ゼロでOK</div>
+    </div>
+  </div>
+
+  <!-- 右：ビジュアル（画像差し替えエリア） -->
+  <div class="hero-visual">
+    <img class="hero-visual-img" src="hero.png" alt="呪文帳 Craftで生成した作品">
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo-strip">
+  <div class="demo-inner">
+    <div>
+      <div class="demo-text-eyebrow reveal">実際のUI</div>
+      <h2 class="demo-title reveal delay-1">直感的な<br>タグ選択UI</h2>
+      <p class="demo-desc reveal delay-2">英語プロンプトを暗記する必要はもうありません。日本語タグをクリックするだけで、SDに渡す英語が自動生成。カテゴリやタグの追加・編集・並び替えも自由自在です。</p>
+    </div>
+    <div class="reveal delay-1">
+      <div class="mock-window">
+        <div class="mock-titlebar">
+          <div class="mock-dot mock-dot-r"></div>
+          <div class="mock-dot mock-dot-y"></div>
+          <div class="mock-dot mock-dot-g"></div>
+        </div>
+        <div class="mock-tabs">
+          <div class="mock-tab on">🖼 ビルダー</div>
+          <div class="mock-tab">⚙️ カテゴリ編集</div>
+          <div class="mock-tab">⚡ プリセット</div>
+        </div>
+        <div class="mock-body">
+          <div class="mock-cat">
+            <div class="mock-cat-hd">
+              <div class="mock-cat-dot" style="background:#f472b6"></div>
+              <span class="mock-cat-label" style="color:#db2777">🎨 被写体</span>
+            </div>
+            <div class="mock-chips">
+              <div class="mock-chip sel-pink">女性</div>
+              <div class="mock-chip">男性</div>
+              <div class="mock-chip">ドラゴン</div>
+              <div class="mock-chip">風景</div>
+            </div>
+          </div>
+          <div class="mock-cat">
+            <div class="mock-cat-hd">
+              <div class="mock-cat-dot" style="background:#818cf8"></div>
+              <span class="mock-cat-label" style="color:#4f46e5">🖌️ スタイル</span>
+            </div>
+            <div class="mock-chips">
+              <div class="mock-chip sel-ind">アニメ風</div>
+              <div class="mock-chip">リアル</div>
+              <div class="mock-chip">水彩画</div>
+              <div class="mock-chip">3DCG</div>
+            </div>
+          </div>
+          <div class="mock-cat">
+            <div class="mock-cat-hd">
+              <div class="mock-cat-dot" style="background:#34d399"></div>
+              <span class="mock-cat-label" style="color:#0d9488">✨ クオリティ</span>
+            </div>
+            <div class="mock-chips">
+              <div class="mock-chip sel-teal">高品質</div>
+              <div class="mock-chip sel-teal">超高解像度</div>
+              <div class="mock-chip">映画的</div>
+            </div>
+          </div>
+          <div class="mock-output">
+            <div class="mock-output-hd">
+              <span class="mock-output-hd-label">✅ ポジティブプロンプト</span>
+              <div class="mock-copy-btn">📋 コピー</div>
+            </div>
+            <div class="mock-output-text">1girl, anime style, anime screencap, masterpiece, best quality, ultra-detailed, 8k uhd</div>
+          </div>
+        </div>
+      </div>
+      <div class="ss-placeholder">
+        📸 スクリーンショットをここに差し替え
+        <div style="font-size:11px;opacity:.6;margin-top:4px;font-weight:400">撮影後に &lt;img&gt; タグで置き換えてください</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section class="gallery-section">
+  <div class="gallery-inner">
+    <div class="gallery-header reveal">
+      <div class="section-eyebrow">Gallery</div>
+      <h2 class="gallery-title">こんな画像が、<span>作れる。</span></h2>
+      <p class="gallery-sub">すべて呪文帳 Craftで生成したプロンプトを使用しています。</p>
+    </div>
+    <div class="gallery-grid reveal delay-1">
+
+      <!-- 画像1 -->
+      <div class="gallery-item gallery-item-large">
+        <!--
+          ▼ 画像が用意できたら img タグに差し替えてください
+          <img src="gallery1.jpg" alt="アニメ風美少女">
+        -->
+<img src="gallery5.png" alt="オーロラ×ファンタジー城" style="width:100%;height:100%;object-fit:cover;display:block">
+      </div>
+
+      <!-- 画像2 -->
+      <div class="gallery-item">
+<img src="gallery1.png" alt="サイバーパンク夜景" style="width:100%;height:100%;object-fit:cover;display:block">
+      </div>
+
+      <!-- 画像3 -->
+      <div class="gallery-item">
+<img src="gallery2.png" alt="ファンタジードラゴン" style="width:100%;height:100%;object-fit:cover;display:block">
+      </div>
+
+      <!-- 画像4 -->
+      <div class="gallery-item">
+<img src="gallery4.png" alt="夕焼けリアル系" style="width:100%;height:100%;object-fit:cover;display:block">
+      </div>
+
+      <!-- 画像5 -->
+      <div class="gallery-item">
+<img src="gallery3.jpg" alt="水彩画風美少女" style="width:100%;height:100%;object-fit:cover;display:block">
+      </div>
+
+    </div>
+    <p class="gallery-note reveal delay-2">※ これらの画像はすべて呪文帳 Craftで組み立てたプロンプトをStable Diffusionに入力して生成しました</p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-eyebrow reveal">Features</div>
+  <h2 class="section-title reveal delay-1">英語なんて、<br>覚えなくていい。</h2>
+  <div class="feat-grid">
+    <div class="feat-card reveal">
+      <div class="feat-icon-wrap">🖱️</div>
+      <div class="feat-title">クリックだけで完成</div>
+      <p class="feat-desc">日本語タグを選ぶと、SDに渡す英語プロンプトが瞬時に生成。英語力は一切不要です。</p>
+    </div>
+    <div class="feat-card reveal delay-1">
+      <div class="feat-icon-wrap">✏️</div>
+      <div class="feat-title">完全カスタマイズ</div>
+      <p class="feat-desc">カテゴリ・タグの追加、編集、ドラッグ並び替えが自由自在。自分だけの辞書を育てられます。</p>
+    </div>
+    <div class="feat-card reveal delay-2">
+      <div class="feat-icon-wrap">⚡</div>
+      <div class="feat-title">プリセット切り替え</div>
+      <p class="feat-desc">よく使う設定をプリセット保存。スタイルをワンクリックで切り替えられます。</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon-wrap">🔍</div>
+      <div class="feat-title">タグ検索</div>
+      <p class="feat-desc">タグが増えても検索一発で絞り込み。日本語・英語どちらでも検索できます。</p>
+    </div>
+    <div class="feat-card reveal delay-1">
+      <div class="feat-icon-wrap">💾</div>
+      <div class="feat-title">CSV / JSONバックアップ</div>
+      <p class="feat-desc">タグはCSV、全データはJSONでバックアップ・復元。以前のデータも引き継げます。</p>
+    </div>
+    <div class="feat-card reveal delay-2">
+      <div class="feat-icon-wrap">🌙</div>
+      <div class="feat-title">ライト / ダークモード</div>
+      <p class="feat-desc">ワンクリックでテーマ切り替え。設定は自動保存されます。</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section class="how" id="how">
+  <div class="how-grid-bg"></div>
+  <div class="how-inner">
+    <div class="section-eyebrow reveal">How it works</div>
+    <h2 class="section-title reveal delay-1">3ステップで使える<br><span style="font-size:.55em;color:rgba(255,255,255,.6);letter-spacing:-.5px">英語は1文字も入力しなくていい</span></h2>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num" data-n="1">STEP</div>
+        <div class="step-title">HTMLを開く</div>
+        <p class="step-desc">ダウンロードしたファイルをダブルクリック。インストール不要、ブラウザで即起動。</p>
+        <div class="step-chip step-chip-orange">spell-craft.html</div>
+      </div>
+      <div class="step reveal delay-1">
+        <div class="step-num" data-n="2">STEP</div>
+        <div class="step-title">タグを選ぶ</div>
+        <p class="step-desc">被写体・スタイル・雰囲気など好きなタグをクリック。プロンプトがリアルタイムで更新されます。</p>
+        <div class="step-chip step-chip-indigo">Click → 即反映</div>
+      </div>
+      <div class="step reveal delay-2">
+        <div class="step-num" data-n="3">STEP</div>
+        <div class="step-title">コピーして使う</div>
+        <p class="step-desc">生成されたプロンプトをコピーしてSDに貼るだけ。ポジ・ネガ別に一発コピーできます。</p>
+        <div class="step-chip step-chip-teal">📋 コピー済み！</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- GUIDE -->
+<section class="guide-section" id="guide">
+  <div class="guide-inner">
+    <div class="section-eyebrow reveal">Guide</div>
+    <h2 class="section-title reveal delay-1">使い方ガイド</h2>
+
+    <div class="guide-tabs">
+      <button class="guide-tab active" onclick="switchGuide(this,'g-basic')">🖱️ 基本操作</button>
+      <button class="guide-tab" onclick="switchGuide(this,'g-custom')">✏️ カスタマイズ</button>
+      <button class="guide-tab" onclick="switchGuide(this,'g-backup')">💾 バックアップ</button>
+      <button class="guide-tab" onclick="switchGuide(this,'g-shortcut')">⌨️ ショートカット</button>
+      <button class="guide-tab" onclick="switchGuide(this,'g-faq')">❓ よくある質問</button>
+    </div>
+
+    <!-- 基本操作 -->
+    <div class="guide-panel active" id="g-basic">
+      <div class="guide-steps">
+        <div class="guide-step">
+          <div class="guide-step-num">1</div>
+          <div>
+            <div class="guide-step-title">HTMLファイルをダブルクリックして開く</div>
+            <p class="guide-step-desc">ダウンロードした <code style="font-family:monospace;background:var(--off);padding:2px 6px;border-radius:4px">spell-craft.html</code> をダブルクリックするだけ。インストールは一切不要で、ブラウザが開いて即使えます。</p>
+            <span class="guide-step-tag">Chrome / Edge / Firefox 対応</span>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">2</div>
+          <div>
+            <div class="guide-step-title">タグをクリックして選択する</div>
+            <p class="guide-step-desc">「🖼 ビルダー」タブで、被写体・スタイル・雰囲気など好きなタグをクリック。選ぶたびに画面下のプロンプトがリアルタイムで更新されます。もう一度クリックすると解除。</p>
+            <span class="guide-step-tag">ポジティブ・ネガティブ自動振り分け</span>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">3</div>
+          <div>
+            <div class="guide-step-title">「📋 コピー」ボタンでプロンプトをコピー</div>
+            <p class="guide-step-desc">ポジティブ・ネガティブそれぞれに「コピー」ボタンがあります。クリック一発でクリップボードに入るので、Stable Diffusionにそのまま貼り付けるだけです。</p>
+            <span class="guide-step-tag">Ctrl+P でもコピー可</span>
+          </div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-step-num">4</div>
+          <div>
+            <div class="guide-step-title">プリセットで一発切り替え</div>
+            <p class="guide-step-desc">画面上部のプリセットボタンをクリックすると、保存済みの組み合わせを一発呼び出し。「アニメ美少女」「サイバーパンク」など5種類のプリセットが最初から入っています。</p>
+            <span class="guide-step-tag">自分でプリセットを追加することも可</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- カスタマイズ -->
+    <div class="guide-panel" id="g-custom">
+      <div class="guide-grid">
+        <div class="guide-card">
+          <div class="guide-card-title"><span class="ico">➕</span>カテゴリを追加する</div>
+          <div class="guide-list">
+            <div class="guide-list-item">「⚙️ カテゴリ編集」タブを開く</div>
+            <div class="guide-list-item">「＋ カテゴリ追加」ボタンをクリック</div>
+            <div class="guide-list-item">ラベル（例：🧥 服装）を入力</div>
+            <div class="guide-list-item">カラーと選択タイプを設定</div>
+            <div class="guide-list-item">「＋ 選択肢追加」でタグを追加（日本語ラベルと英語プロンプトをセット入力）</div>
+            <div class="guide-list-item">「✓ 保存して反映」を押す</div>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title"><span class="ico">✏️</span>タグを編集する</div>
+          <div class="guide-list">
+            <div class="guide-list-item">左のカテゴリ一覧から対象をクリック</div>
+            <div class="guide-list-item">右パネルの選択肢一覧で日本語・英語を編集</div>
+            <div class="guide-list-item">「×」ボタンで不要なタグを削除</div>
+            <div class="guide-list-item">左端の「⠿」ハンドルをドラッグして順番を変更</div>
+            <div class="guide-list-item">必ず「✓ 保存して反映」を押す</div>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title"><span class="ico">⠿</span>カテゴリの順番を変える</div>
+          <div class="guide-list">
+            <div class="guide-list-item">「⚙️ カテゴリ編集」タブを開く</div>
+            <div class="guide-list-item">左一覧の「⠿」ハンドルをドラッグ</div>
+            <div class="guide-list-item">ビルダーの表示順に即反映されます</div>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title"><span class="ico">⚡</span>プリセットを作る</div>
+          <div class="guide-list">
+            <div class="guide-list-item">ビルダーで好みのタグを選択しておく</div>
+            <div class="guide-list-item">「⚡ プリセット編集」タブを開く</div>
+            <div class="guide-list-item">「＋ プリセット追加」をクリック（現在の選択が保存される）</div>
+            <div class="guide-list-item">名前を入力して「✓ 保存」</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- バックアップ -->
+    <div class="guide-panel" id="g-backup">
+      <div class="guide-grid">
+        <div class="guide-card">
+          <div class="guide-card-title"><span class="ico">📦</span>JSONバックアップ（推奨）</div>
+          <div class="guide-list">
+            <div class="guide-list-item">「⚙️ カテゴリ編集」タブを開く</div>
+            <div class="guide-list-item">「📦 JSONバックアップ」をクリック</div>
+            <div class="guide-list-item">カテゴリ・タグ・プリセットがまとめて保存される</div>
+            <div class="guide-list-item">復元は「📂 JSONから復元」から読み込むだけ</div>
+          </div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-card-title"><span class="ico">📊</span>CSVエクスポート</div>
+          <div class="guide-list">
+            <div class="guide-list-item">「⬇️ CSVで書き出し」でタグデータを保存</div>
+            <div class="guide-list-item">Excelで編集して「⬆️ CSVから読み込み」で反映可</div>
+            <div class="guide-list-item">CSVはタグのみ。プリセットは含まれない</div>
+          </div>
+        </div>
+        <div class="guide-card" style="grid-column: 1 / -1">
+          <div class="guide-card-title"><span class="ico">⚠️</span>データを失わないために</div>
+          <div class="guide-list">
+            <div class="guide-list-item">ブラウザの「閲覧データを消去」でデータが消えることがあります。<strong>定期的にJSONバックアップを取ることを強く推奨します。</strong></div>
+            <div class="guide-list-item">別のPCで使いたい場合はHTMLファイルをコピーし、JSONバックアップを復元すれば同じ環境を再現できます。</div>
+            <div class="guide-list-item">アップデート時はJSONバックアップを取ってから新しいHTMLに差し替えてください。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ショートカット -->
+    <div class="guide-panel" id="g-shortcut">
+      <div class="shortcut-grid">
+        <div class="sc-item">
+          <div class="sc-desc">ポジティブプロンプトをコピー</div>
+          <div class="sc-keys"><span class="lp-kbd">Ctrl</span><span style="font-size:11px;color:var(--muted)">+</span><span class="lp-kbd">P</span></div>
+        </div>
+        <div class="sc-item">
+          <div class="sc-desc">ネガティブプロンプトをコピー</div>
+          <div class="sc-keys"><span class="lp-kbd">Ctrl</span><span style="font-size:11px;color:var(--muted)">+</span><span class="lp-kbd">Shift</span><span style="font-size:11px;color:var(--muted)">+</span><span class="lp-kbd">P</span></div>
+        </div>
+        <div class="sc-item">
+          <div class="sc-desc">選択をすべてリセット</div>
+          <div class="sc-keys"><span class="lp-kbd">Ctrl</span><span style="font-size:11px;color:var(--muted)">+</span><span class="lp-kbd">R</span></div>
+        </div>
+        <div class="sc-item">
+          <div class="sc-desc">検索バーにフォーカス</div>
+          <div class="sc-keys"><span class="lp-kbd">/</span></div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:16px">※ Macの場合は Ctrl → Cmd に読み替えてください。入力欄にフォーカス中はショートカットは動作しません。</p>
+    </div>
+
+    <!-- FAQ -->
+    <div class="guide-panel" id="g-faq">
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-q">インターネットがない環境でも使えますか？</div>
+          <div class="faq-a">初回起動時のみフォント読み込みにネット接続が必要ですが、以降はオフラインで動作します。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">別のPCでも同じ環境を使いたい</div>
+          <div class="faq-a">HTMLファイルをコピーし、「JSONバックアップ」を復元すれば別PCでも同じ設定を再現できます。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">データをリセットしたい</div>
+          <div class="faq-a">ブラウザの開発者ツール（F12）→「アプリケーション」→「ローカルストレージ」から jc_craft_data を削除するとリセットできます。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">アップデートはどうやって受け取りますか？</div>
+          <div class="faq-a">BOOTHのダウンロードページから最新版を再ダウンロードできます。JSONバックアップを取ってから新しいHTMLに差し替えてください。購入後のアップデートはすべて無料です。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">Stable Diffusion以外でも使えますか？</div>
+          <div class="faq-a">テキストをコピーするだけなので、Midjourney・NovelAI・FLUX など英語プロンプトを使う生成AIであればどれでも利用できます。</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PRICE -->
+<section class="price-section" id="price">
+  <div class="reveal">
+    <div class="price-card">
+      <div class="price-label">PRICE</div>
+      <div class="price-amount"><sup>¥</sup>1,000</div>
+      <div class="price-note">買い切り — アップデート永久無料</div>
+      <div class="price-features">
+        <div class="price-feature">インストール不要・HTMLファイル1つ</div>
+        <div class="price-feature">アカウント登録不要</div>
+        <div class="price-feature">完全ローカル動作・データはPC内に保存</div>
+        <div class="price-feature">CSV / JSONバックアップ対応</div>
+        <div class="price-feature">購入後アップデート無料</div>
+      </div>
+      <a class="price-btn" href="https://booth.pm" target="_blank">BOOTHで購入する →</a>
+    </div>
+  </div>
+  <div>
+    <div class="section-eyebrow reveal">Specs</div>
+    <h2 class="section-title reveal delay-1" style="font-size:clamp(28px,3vw,44px);margin-bottom:32px">仕様</h2>
+    <div class="specs-list">
+      <div class="spec-row reveal">
+        <div class="spec-icon">📁</div>
+        <div><div class="spec-label">ファイル形式</div><div class="spec-val">HTML単体ファイル（インストール不要）</div></div>
+      </div>
+      <div class="spec-row reveal delay-1">
+        <div class="spec-icon">🌐</div>
+        <div><div class="spec-label">動作環境</div><div class="spec-val">Chrome / Edge / Firefox 最新版</div></div>
+      </div>
+      <div class="spec-row reveal delay-2">
+        <div class="spec-icon">🎯</div>
+        <div><div class="spec-label">初期データ</div><div class="spec-val">8カテゴリ・80以上のタグ・5プリセット付属</div></div>
+      </div>
+      <div class="spec-row reveal">
+        <div class="spec-icon">💿</div>
+        <div><div class="spec-label">データ保存</div><div class="spec-val">ブラウザ内（CSV/JSONでバックアップ可）</div></div>
+      </div>
+      <div class="spec-row reveal delay-1">
+        <div class="spec-icon">🔄</div>
+        <div><div class="spec-label">アップデート</div><div class="spec-val">購入後は無料で提供</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-title reveal">タグを選ぶだけ。<br><span>あとは呪文帳が全部やる。</span></h2>
+  <p class="cta-sub reveal delay-1">英語力ゼロでも、プロ級のプロンプトが作れる。今すぐBOOTHで手に入れよう。</p>
+  <a class="btn-cta reveal delay-2" href="https://booth.pm" target="_blank">
+    BOOTHで購入する ¥1,000 <span class="arr">→</span>
+  </a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    <div class="mark">📖</div>
+    呪文帳 Craft
+  </div>
+  <div class="footer-links">
+    <a href="#features">機能</a>
+    <a href="#how">使い方</a>
+    <a href="#price">価格</a>
+    <a href="https://booth.pm" target="_blank">BOOTH</a>
+  </div>
+  <div class="footer-copy">© 2026 呪文帳 Craft</div>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+function switchGuide(btn, panelId) {
+  document.querySelectorAll('.guide-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.guide-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+</script>
+</body>
+</html>
