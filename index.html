@@ -733,6 +733,62 @@ footer {
   .faq-q::before { content: 'Q'; color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 800; flex-shrink: 0; }
   .faq-a { font-size: 13px; color: var(--muted); line-height: 1.75; display: flex; gap: 10px; }
   .faq-a::before { content: 'A'; color: var(--accent2); font-family: 'Syne', sans-serif; font-weight: 800; flex-shrink: 0; }
+
+  /* ── SUPPORTED AI ── */
+  .ai-strip {
+    background: var(--off); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 20px 48px;
+  }
+  .ai-strip-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  }
+  .ai-strip-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); flex-shrink: 0;
+  }
+  .ai-badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .ai-badge {
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--border); background: var(--white); color: var(--ink);
+    transition: all .2s;
+  }
+  .ai-badge:hover { border-color: var(--accent); color: var(--accent); }
+  .ai-badge.highlight { border-color: rgba(255,77,28,.3); background: rgba(255,77,28,.05); color: var(--accent); }
+
+  /* ── TARGET SECTION ── */
+  .target-section {
+    background: var(--ink); padding: 80px 48px;
+  }
+  .target-inner { max-width: 1100px; margin: 0 auto; }
+  .target-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 48px;
+  }
+  @media (max-width: 768px) { .target-grid { grid-template-columns: 1fr; } .target-section { padding: 60px 20px; } .ai-strip { padding: 20px; } }
+  .target-card {
+    padding: 32px; border-radius: 16px;
+    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+  }
+  .target-card-title {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 18px; color: #fff; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .target-card-title .lv {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .lv-beginner { background: rgba(52,211,153,.15); color: #34d399; }
+  .lv-advanced { background: rgba(129,140,248,.15); color: #818cf8; }
+  .target-list { display: flex; flex-direction: column; gap: 10px; }
+  .target-item {
+    display: flex; gap: 10px; font-size: 13px;
+    color: rgba(255,255,255,.6); line-height: 1.6;
+  }
+  .target-item::before {
+    content: '✓'; color: #34d399; font-weight: 900; flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -762,7 +818,7 @@ footer {
       Stable Diffusion Tool
     </div>
     <h1>タグを選ぶだけで、<span class="line2">プロンプト完成。</span></h1>
-    <p class="hero-sub">英語力ゼロで、プロ級の呪文。日本語タグをクリックするだけで、高精度な英語プロンプトを自動生成。もう呪文を暗記しなくていい。</p>
+    <p class="hero-sub">英語力ゼロで、プロ級の呪文。日本語タグをクリックするだけで、高精度な英語プロンプトを自動生成。SD・MJ・NovelAI・FLUXなど主要AIに対応。初心者から玄人まで、自分仕様にカスタムできる。</p>
     <div class="hero-actions">
       <a class="btn-hero-primary" href="https://spell-craft.booth.pm/items/8485120" target="_blank">
         BOOTHで購入する <span class="arr">→</span>
@@ -787,13 +843,30 @@ footer {
   </div>
 </section>
 
+
+<!-- AI STRIP -->
+<div class="ai-strip">
+  <div class="ai-strip-inner">
+    <span class="ai-strip-label">対応AI</span>
+    <div class="ai-badges">
+      <span class="ai-badge highlight">Stable Diffusion</span>
+      <span class="ai-badge">NovelAI</span>
+      <span class="ai-badge">Midjourney</span>
+      <span class="ai-badge">FLUX</span>
+      <span class="ai-badge">Nano Banana</span>
+      <span class="ai-badge">Grok Aurora</span>
+      <span class="ai-badge">その他 英語プロンプト対応AI</span>
+    </div>
+  </div>
+</div>
+
 <!-- DEMO -->
 <section class="demo-strip">
   <div class="demo-inner">
     <div>
       <div class="demo-text-eyebrow reveal">実際のUI</div>
       <h2 class="demo-title reveal delay-1">直感的な<br>タグ選択UI</h2>
-      <p class="demo-desc reveal delay-2">英語プロンプトを暗記する必要はもうありません。日本語タグをクリックするだけで、SDに渡す英語が自動生成。カテゴリやタグの追加・編集・並び替えも自由自在です。</p>
+      <p class="demo-desc reveal delay-2">英語プロンプトを暗記する必要はもうありません。日本語タグをクリックするだけで英語が自動生成。カテゴリ・タグを自由に育てて、完全に自分仕様にカスタマイズできます。初心者の入門から、玄人のプロンプト管理まで。</p>
     </div>
     <div class="reveal delay-1">
       <div class="mock-window">
@@ -908,6 +981,7 @@ footer {
 <section class="features" id="features">
   <div class="section-eyebrow reveal">Features</div>
   <h2 class="section-title reveal delay-1">英語なんて、<br>覚えなくていい。</h2>
+  <p class="reveal delay-2" style="color:var(--muted);font-size:15px;margin-top:-40px;margin-bottom:48px">初心者の最初の一歩から、玄人の本格的なプロンプト管理まで。自分仕様に育てるツール。</p>
   <div class="feat-grid">
     <div class="feat-card reveal">
       <div class="feat-icon-wrap">🖱️</div>
@@ -971,6 +1045,41 @@ footer {
   </div>
 </section>
 
+
+
+<!-- TARGET -->
+<section class="target-section">
+  <div class="target-inner">
+    <div class="section-eyebrow reveal" style="color:#fb923c">Who is this for</div>
+    <h2 class="section-title reveal delay-1" style="color:#fff">初心者から玄人まで、<br><span style="color:#fb923c">自分仕様に育てるツール。</span></h2>
+    <div class="target-grid">
+      <div class="target-card reveal">
+        <div class="target-card-title">
+          <span class="lv lv-beginner">BEGINNER</span>
+          これから始める初心者
+        </div>
+        <div class="target-list">
+          <div class="target-item">英語プロンプトが何かわからない</div>
+          <div class="target-item">毎回ネットでプロンプトをコピペしてる</div>
+          <div class="target-item">ネガティブプロンプトに何を入れればいいかわからない</div>
+          <div class="target-item">とにかく手軽に始めたい</div>
+        </div>
+      </div>
+      <div class="target-card reveal delay-1">
+        <div class="target-card-title">
+          <span class="lv lv-advanced">ADVANCED</span>
+          こだわり派の玄人
+        </div>
+        <div class="target-list">
+          <div class="target-item">自分だけのプロンプト辞書を体系的に管理したい</div>
+          <div class="target-item">スタイル別にプリセットを使い分けたい</div>
+          <div class="target-item">タグをCSV/JSONで管理・バックアップしたい</div>
+          <div class="target-item">複数のAIツールでプロンプトを使い回したい</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- GUIDE -->
 <section class="guide-section" id="guide">
