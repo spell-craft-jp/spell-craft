@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>呪文帳 Craft — 無料版</title>
+<title>呪文帳 Craft</title>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -547,102 +547,20 @@
   .help-section-title::after {
     content: ''; flex: 1; height: 1px; background: var(--border);
   }
-
-  /* ── FREE VERSION LOCKED FEATURES ── */
-  .locked-feature {
-    position: relative; opacity: .5; pointer-events: none;
-    user-select: none;
-  }
-  .locked-feature::after {
-    content: ''; position: absolute; inset: 0;
-    background: repeating-linear-gradient(
-      -45deg, transparent, transparent 4px,
-      rgba(120,130,160,0.15) 4px, rgba(120,130,160,0.15) 5px
-    );
-    border-radius: 8px;
-    pointer-events: none;
-  }
-  .locked-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 10px; font-weight: 700; color: var(--muted);
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 999px; padding: 3px 10px;
-    pointer-events: none;
-  }
-  .locked-row {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  }
-  .preset-limit-info {
-    font-size: 11px; color: var(--muted); padding: 6px 0;
-  }
-  .preset-limit-info span { color: var(--accent); font-weight: 700; }
-  .free-banner {
-    background: linear-gradient(90deg, rgba(14,165,233,.08), rgba(99,102,241,.08));
-    border-bottom: 1px solid rgba(99,102,241,.15);
-    padding: 10px 20px;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 8px;
-  }
-  .free-banner-text {
-    font-size: 12px; color: var(--muted);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .free-banner-text strong { color: var(--text); }
-  .free-limit-bar {
-    display: flex; align-items: center; gap: 8px; font-size: 12px;
-  }
-  .free-limit-track {
-    width: 100px; height: 6px; border-radius: 999px;
-    background: var(--surface2); overflow: hidden;
-  }
-  .free-limit-fill {
-    height: 100%; border-radius: 999px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    transition: width .3s;
-  }
-  .free-limit-fill.warning { background: #f59e0b; }
-  .free-limit-fill.full { background: var(--danger); }
-  .btn-upgrade {
-    padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 700;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    color: #fff; border: none; cursor: pointer;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    text-decoration: none; display: inline-block;
-    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
-  }
-  .btn-upgrade:hover { opacity: .9; }
-  .tag-limit-warning {
-    display: none; padding: 12px 16px; border-radius: 10px;
-    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
-    font-size: 13px; color: var(--danger); margin: 12px 0;
-    text-align: center;
-  }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📖 呪文帳 Craft <span class="version-badge">無料版</span></h1>
-  <p>タグを選ぶだけで、英語プロンプト完成。カスタムタグは20個まで追加できます。</p>
+  <h1>📖 呪文帳 Craft <span class="version-badge">v1.0.0</span></h1>
+  <p>タグを選ぶだけで、英語プロンプト完成。あなただけの呪文帳を育てよう。</p>
   <div class="header-stats" id="header-stats" style="display:none">
     <span id="stat-cats" class="header-stat-chip has-sel"></span>
     <span id="stat-tags" class="header-stat-chip has-sel"></span>
   </div>
 </header>
 
-<!-- ═══ FREE VERSION BANNER ═══ -->
-<div class="free-banner" id="free-banner">
-  <div class="free-banner-text">
-    <span>🆓 無料版</span>
-    <strong>カスタムタグ残り <span id="free-limit-count">20</span> 個</strong>
-  </div>
-  <div class="free-limit-bar">
-    <div class="free-limit-track">
-      <div class="free-limit-fill" id="free-limit-fill" style="width:0%"></div>
-    </div>
-    <a class="btn-upgrade" href="https://spell-craft.booth.pm/items/8485120" target="_blank">フル版を購入 ¥1,200</a>
-  </div>
-</div>
+<!-- ═══ ONBOARDING MODAL ═══ -->
 <div class="modal-overlay" id="onboarding-modal" style="display:none">
   <div class="modal-box">
     <div class="modal-hero">
@@ -707,9 +625,7 @@
 </div>
 
 <!-- ダークモード切り替え -->
-<div class="locked-feature" style="position:fixed;bottom:24px;right:20px;z-index:100;" title="有料版のみ">
-  <button class="theme-toggle" style="cursor:not-allowed">🔒</button>
-</div>
+<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="ダーク/ライト切り替え">🌙</button>
 
 <!-- ═══════════════════════════════════════════
      TAB 1: BUILDER
@@ -741,29 +657,17 @@
 <div class="view" id="view-editor">
   <div class="csv-toolbar">
     <span>💾 CSV管理</span>
-    <div class="locked-row">
-      <div class="locked-feature">
-        <button class="btn-csv-export">⬇️ CSVで書き出し</button>
-      </div>
-      <div class="locked-feature">
-        <button class="btn-csv-import">⬆️ CSVから読み込み</button>
-      </div>
-      <span class="locked-badge">🔒 有料版のみ</span>
-      <a href="https://spell-craft.booth.pm/items/8485120" target="_blank" class="btn-upgrade" style="font-size:11px;padding:4px 12px">フル版で使う</a>
-    </div>
+    <button class="btn-csv-export" onclick="exportCSV()">⬇️ CSVで書き出し</button>
+    <button class="btn-csv-import" onclick="document.getElementById('csv-file-input').click()">⬆️ CSVから読み込み</button>
+    <input type="file" id="csv-file-input" accept=".csv" onchange="importCSV(this)">
+    <span class="info-tip" style="margin-left:4px">タグやカテゴリをCSVで管理・バックアップできます</span>
   </div>
   <div class="backup-bar">
     <span>🗂 全データ</span>
-    <div class="locked-row">
-      <div class="locked-feature">
-        <button class="btn-backup">📦 JSONバックアップ</button>
-      </div>
-      <div class="locked-feature">
-        <button class="btn-restore">📂 JSONから復元</button>
-      </div>
-      <span class="locked-badge">🔒 有料版のみ</span>
-      <a href="https://spell-craft.booth.pm/items/8485120" target="_blank" class="btn-upgrade" style="font-size:11px;padding:4px 12px">フル版で使う</a>
-    </div>
+    <button class="btn-backup" onclick="exportJSON()">📦 JSONバックアップ</button>
+    <button class="btn-restore" onclick="document.getElementById('restore-file-input').click()">📂 JSONから復元</button>
+    <input type="file" id="restore-file-input" accept=".json" onchange="importJSON(this)">
+    <span class="info-tip" style="margin-left:4px">カテゴリ・プリセット・設定をまとめてバックアップ</span>
   </div>
   <div class="editor-grid" style="margin-top:14px">
     <div>
@@ -782,11 +686,10 @@
      TAB 3: PRESET EDITOR
 ═══════════════════════════════════════════ -->
 <div class="view" id="view-presets">
-  <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
     <button class="action-btn btn-teal" onclick="addPreset()">＋ プリセット追加</button>
     <span class="info-tip">現在の選択状態をスナップショットして保存できます</span>
   </div>
-  <div class="preset-limit-info">プリセット残り <span id="preset-limit-count">3</span> 個（無料版は3個まで）　<a href="https://spell-craft.booth.pm/items/8485120" target="_blank" style="color:var(--accent);font-weight:700;font-size:11px">フル版で無制限に →</a></div>
   <div class="preset-editor-list" id="preset-editor-list"></div>
 </div>
 
@@ -1009,8 +912,11 @@ let data = {
     { id:"negative", label:"🚫 ネガティブ", color:"#f87171", single:false, negative:true, options:[{ja:"ぼやけ・低画質",en:"blurry, low quality, bad anatomy, worst quality"},{ja:"変な手・指",en:"bad hands, extra fingers, deformed hands, missing fingers"},{ja:"余分な手足",en:"extra limbs, mutated, deformed body"},{ja:"文字・透かし",en:"text, watermark, signature, username"},{ja:"変な顔",en:"bad face, ugly, deformed face, cross-eyed"},{ja:"モノクロ",en:"grayscale, monochrome"},{ja:"フレームアウト",en:"cropped, out of frame, cut off"},{ja:"AI特有のアーティファクト",en:"jpeg artifacts, noise, grain, pixelated"}] }
   ],
   presets: [
-    { id:"p1", label:"🌸 黄金時間の制服少女", selections:{ quality:["masterpiece, best quality","ultra-detailed, 8k uhd","beautiful lighting, cinematic lighting"], subject:["1girl"], style:["anime style, anime screencap"], hair_style:["long hair","silky hair, smooth hair"], hair_color:["brown hair"], eyes:["blue eyes","large eyes, big eyes"], expression:["shy smile, embarrassed smile"], gaze:["looking at viewer"], outfit:["blazer, school uniform"], pose:["leaning against wall"], composition:["upper body, bust shot"], mood:["golden hour, sunset, warm colors"], location:["rooftop, school roof"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } },
-    { id:"p2", label:"🌙 夜桜の和風美少女", selections:{ quality:["masterpiece, best quality","cinematic, film grain","depth of field, bokeh background"], subject:["1girl"], style:["anime style, anime screencap"], hair_style:["long hair","glossy hair, shiny hair"], hair_color:["black hair"], eyes:["purple eyes","watery eyes, glistening eyes"], expression:["serious expression, determined"], gaze:["looking away, into the distance"], outfit:["kimono, japanese clothes"], accessory:["flower hair ornament, floral"], composition:["full body shot"], mood:["night, dark atmosphere, moonlight"], background:["petals falling, flower petals"], location:["japanese shrine, torii gate"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } }
+    { id:"p1", label:"✨ アニメ美少女", selections:{ quality:["masterpiece, best quality","ultra-detailed, 8k uhd"], subject:["1girl"], style:["anime style, anime screencap"], hair_style:["long hair"], hair_color:["silver hair, white hair"], eyes:["blue eyes"], expression:["smile, happy expression"], composition:["upper body, bust shot"], mood:["golden hour, sunset, warm colors"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } },
+    { id:"p2", label:"🌆 サイバーパンク夜景", selections:{ quality:["masterpiece, best quality","beautiful lighting, cinematic lighting"], subject:["scenery, no humans"], style:["cyberpunk, neon lights, futuristic"], angle:["wide angle, panoramic"], mood:["neon lights, night city, glowing"], negative:["blurry, low quality, bad anatomy, worst quality","text, watermark, signature, username"] } },
+    { id:"p3", label:"📸 リアル人物写真", selections:{ quality:["ultra-detailed, 8k uhd","professional photography, DSLR","depth of field, bokeh background"], subject:["1girl"], style:["photorealistic, hyperrealistic, 8k"], composition:["upper body, bust shot"], mood:["golden hour, sunset, warm colors"], negative:["blurry, low quality, bad anatomy, worst quality","bad face, ugly, deformed face, cross-eyed","text, watermark, signature, username"] } },
+    { id:"p4", label:"🌸 和風ファンタジー", selections:{ quality:["masterpiece, best quality","beautiful lighting, cinematic lighting"], subject:["1girl"], style:["fantasy art, magical, ethereal"], hair_color:["black hair"], outfit:["kimono, japanese clothes"], composition:["full body shot"], mood:["cherry blossoms, spring, petals falling"], location:["japanese shrine, torii gate"], negative:["blurry, low quality, bad anatomy, worst quality","text, watermark, signature, username"] } },
+    { id:"p5", label:"🐉 ファンタジー風景", selections:{ quality:["masterpiece, best quality","award winning art, trending on artstation","cinematic, film grain"], subject:["dragon"], style:["fantasy art, magical, ethereal"], angle:["wide angle, panoramic"], mood:["foggy, misty, dreamy atmosphere"], location:["fantasy world, magical realm"], negative:["blurry, low quality, bad anatomy, worst quality","text, watermark, signature, username"] } }
   ]
 };
 
@@ -1200,8 +1106,6 @@ function makeOutputBlock(label, text, cls, color) {
   btn.addEventListener('click', () => {
     navigator.clipboard.writeText(text).then(() => {
       btn.classList.add('done'); btn.textContent = '✓ コピー済み！';
-      // GA イベント計測
-      gtag('event', 'prompt_copied', { event_category: 'engagement', event_label: cls });
       const tid = setTimeout(() => {
         if (btn.isConnected) { btn.classList.remove('done'); btn.textContent = '📋 コピー'; }
         clearTimeout(tid);
@@ -1301,23 +1205,18 @@ function renderEditPanel() {
       <span></span>
     </div>
     <div class="options-list" id="options-list">
-      ${cat.options.map((o,i)=>{
-        const isDefault = i < getDefaultOptCount(cat.id);
-        return `
+      ${cat.options.map((o,i)=>`
         <div class="option-row" draggable="true" data-oi="${i}">
           <span class="opt-drag-handle" title="ドラッグで並び替え">⠿</span>
-          <input value="${escH(o.ja)}" oninput="setOptJa(${i},this.value)" placeholder="日本語" ${isDefault?'readonly style="opacity:.6"':''}>
-          <input value="${escH(o.en)}" oninput="setOptEn(${i},this.value)" placeholder="英語プロンプト" style="font-family:'JetBrains Mono',monospace;font-size:11px${isDefault?';opacity:.6':''}" ${isDefault?'readonly':''}>
-          ${isDefault ? '<span style="font-size:10px;color:var(--muted);text-align:center;width:28px" title="デフォルトタグは削除できません">🔒</span>' : `<button class="del-btn" onclick="delOpt(${i})">×</button>`}
-        </div>`;
-      }).join('')}
+          <input value="${escH(o.ja)}" oninput="setOptJa(${i},this.value)" placeholder="日本語">
+          <input value="${escH(o.en)}" oninput="setOptEn(${i},this.value)" placeholder="英語プロンプト" style="font-family:'JetBrains Mono',monospace;font-size:11px">
+          <button class="del-btn" onclick="delOpt(${i})">×</button>
+        </div>
+      `).join('')}
     </div>
     <div class="action-row">
       <button class="action-btn btn-teal" onclick="addOpt()">＋ 選択肢追加</button>
-      ${isDefaultCat(cat.id)
-        ? '<button class="action-btn" style="opacity:.4;cursor:not-allowed" title="デフォルトカテゴリは削除できません">🔒 カテゴリ削除</button>'
-        : '<button class="action-btn btn-red" onclick="deleteCat()">🗑 カテゴリ削除</button>'
-      }
+      <button class="action-btn btn-red" onclick="deleteCat()">🗑 カテゴリ削除</button>
       <button class="btn-save" onclick="saveEdits()">✓ 保存して反映</button>
     </div>
     <p class="info-tip" style="margin-top:10px">保存するとビルダーに即反映されます</p>
@@ -1348,13 +1247,7 @@ function setOptEn(i,v) {
   }
 }
 function addOpt() {
-  if (isFreeLimitReached()) {
-    showToast('⚠️ 無料版のタグ上限（20個）に達しました。フル版にアップグレードしてください。');
-    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_tag' });
-    return;
-  }
   data.categories.find(c=>c.id===editingCatId).options.push({ja:'',en:''});
-  updateFreeLimitUI();
   renderEditPanel();
 }
 function delOpt(i) {
@@ -1365,26 +1258,14 @@ function delOpt(i) {
   if (builderSel[cat.id] && removedEn) {
     builderSel[cat.id] = builderSel[cat.id].filter(x => x !== removedEn);
   }
-  updateFreeLimitUI();
   renderEditPanel();
 }
-// デフォルトカテゴリIDを初回起動時に記録
-function isDefaultCat(catId) {
-  // カスタム追加カテゴリのIDは 'cat_' + タイムスタンプ形式
-  return !catId.startsWith('cat_');
-}
-
 function deleteCat() {
-  if (isDefaultCat(editingCatId)) {
-    showToast('⚠️ デフォルトカテゴリは削除できません');
-    return;
-  }
   if (!confirm('このカテゴリを削除しますか？')) return;
   data.categories = data.categories.filter(c=>c.id!==editingCatId);
   editingCatId = null; save(); renderEditorList();
   document.getElementById('edit-panel').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:30px 0;text-align:center">← 左のカテゴリを選択してください</div>';
   renderBuilder();
-  updateFreeLimitUI();
 }
 function bindOptDrag() {
   const rows = document.querySelectorAll('#options-list .option-row');
@@ -1430,19 +1311,12 @@ function saveEdits() {
     builderSel[cat.id] = [];
   }
   save(); renderEditorList(); renderBuilder();
-  updateFreeLimitUI();
   showToast('保存しました ✓');
 }
 function addCategory() {
-  if (isFreeLimitReached()) {
-    showToast('⚠️ 無料版のタグ上限（20個）に達しました。フル版にアップグレードしてください。');
-    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_category' });
-    return;
-  }
   const id = 'cat_' + Date.now();
   data.categories.push({ id, label:'🆕 新しいカテゴリ', color:'#60a5fa', single:false, negative:false, options:[] });
   editingCatId = id; save(); renderEditorList(); renderBuilder();
-  updateFreeLimitUI();
 }
 
 // ─────────────────────────────────────────────────────
@@ -1468,22 +1342,9 @@ function renderPresetEditor() {
     list.appendChild(div);
   });
 }
-const FREE_PRESET_LIMIT = 3;
-
-function updatePresetLimitUI() {
-  const el = document.getElementById('preset-limit-count');
-  if (el) el.textContent = Math.max(0, FREE_PRESET_LIMIT - data.presets.length);
-}
-
 function addPreset() {
-  if (data.presets.length >= FREE_PRESET_LIMIT) {
-    showToast('⚠️ 無料版はプリセット3個まで。フル版にアップグレードしてください。');
-    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_preset' });
-    return;
-  }
   data.presets.push({ id:'p'+Date.now(), label:'🆕 新しいプリセット', selections: JSON.parse(JSON.stringify(builderSel)) });
   save(); renderPresetEditor(); renderBuilder();
-  updatePresetLimitUI();
   showToast('現在の選択でプリセットを作成しました');
 }
 function deletePreset(i) {
@@ -1735,63 +1596,11 @@ document.addEventListener('keydown', e => {
 });
 
 // ─────────────────────────────────────────────────────
-// FREE VERSION LIMIT
-// ─────────────────────────────────────────────────────
-const FREE_TAG_LIMIT = 20;
-
-// デフォルトの初期タグ数を記録（初回起動時に確定）
-// デフォルトの各カテゴリのタグ数を初回起動時に記録
-function getDefaultOptCount(catId) {
-  const key = 'jc_free_default_opts_' + catId;
-  const saved = localStorage.getItem(key);
-  if (saved !== null) return parseInt(saved);
-  const cat = data.categories.find(c => c.id === catId);
-  const count = cat ? cat.options.length : 0;
-  localStorage.setItem(key, count);
-  return count;
-}
-
-function getDefaultTagCount() {
-  const saved = localStorage.getItem('jc_free_default_count');
-  if (saved) return parseInt(saved);
-  // 初回：現在のタグ数をデフォルトとして記録
-  const count = data.categories.reduce((sum, c) => sum + c.options.length, 0);
-  localStorage.setItem('jc_free_default_count', count);
-  return count;
-}
-
-function countCustomTags() {
-  const total = data.categories.reduce((sum, c) => sum + c.options.length, 0);
-  const defaultCount = getDefaultTagCount();
-  return Math.max(0, total - defaultCount);
-}
-
-function updateFreeLimitUI() {
-  const customCount = countCustomTags();
-  const remaining = Math.max(0, FREE_TAG_LIMIT - customCount);
-  const pct = Math.min(100, (customCount / FREE_TAG_LIMIT) * 100);
-
-  const countEl = document.getElementById('free-limit-count');
-  const fillEl = document.getElementById('free-limit-fill');
-  if (countEl) countEl.textContent = remaining;
-  if (fillEl) {
-    fillEl.style.width = pct + '%';
-    fillEl.className = 'free-limit-fill' + (pct >= 100 ? ' full' : pct >= 70 ? ' warning' : '');
-  }
-}
-
-function isFreeLimitReached() {
-  return countCustomTags() >= FREE_TAG_LIMIT;
-}
-
-// ─────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────
 renderBuilder();
 initOnboarding();
 initTheme();
-updateFreeLimitUI();
-updatePresetLimitUI();
 </script>
 </body>
 </html>
