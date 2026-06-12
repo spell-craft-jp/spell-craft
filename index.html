@@ -789,6 +789,70 @@ footer {
   .target-item::before {
     content: '✓'; color: #34d399; font-weight: 900; flex-shrink: 0;
   }
+
+  /* ── NAV FREE BTN ── */
+  .nav-cta-free {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 20px; border-radius: 10px;
+    border: 1.5px solid var(--border); color: var(--ink);
+    font-size: 13px; font-weight: 700; text-decoration: none;
+    transition: all .18s; background: var(--white);
+  }
+  .nav-cta-free:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  /* ── HERO FREE BTN ── */
+  .btn-hero-free {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 16px 28px; border-radius: 12px;
+    border: 1.5px solid rgba(79,70,229,.3);
+    background: rgba(79,70,229,.06); color: var(--accent2);
+    font-size: 15px; font-weight: 700; text-decoration: none;
+    transition: all .2s;
+  }
+  .btn-hero-free:hover { background: rgba(79,70,229,.12); border-color: var(--accent2); }
+
+  /* ── PRICE FREE BTN ── */
+  .price-btn-free {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 12px; padding: 13px; border-radius: 12px;
+    background: rgba(255,255,255,.07); color: rgba(255,255,255,.7);
+    font-size: 14px; font-weight: 700; text-decoration: none;
+    border: 1px solid rgba(255,255,255,.1);
+    transition: all .2s;
+  }
+  .price-btn-free:hover { background: rgba(255,255,255,.12); color: #fff; }
+
+  /* ── FREE VERSION SECTION ── */
+  .free-version-section {
+    background: linear-gradient(90deg, rgba(79,70,229,.05), rgba(14,165,233,.05));
+    border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 20px 48px;
+  }
+  .free-version-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .free-version-badge {
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 900;
+    background: rgba(79,70,229,.1); color: var(--accent2);
+    border: 1.5px solid rgba(79,70,229,.2); flex-shrink: 0;
+  }
+  .free-version-text {
+    flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 200px;
+  }
+  .free-version-text strong { font-size: 14px; font-weight: 900; }
+  .free-version-text span { font-size: 12px; color: var(--muted); }
+  .free-version-btn {
+    padding: 10px 22px; border-radius: 10px; font-size: 13px; font-weight: 700;
+    background: var(--accent2); color: #fff; text-decoration: none;
+    transition: all .2s; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(79,70,229,.25);
+  }
+  .free-version-btn:hover { opacity: .9; transform: translateY(-1px); }
+  @media (max-width: 768px) {
+    .free-version-section { padding: 16px 20px; }
+    .nav-cta-free { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -804,6 +868,7 @@ footer {
     <a href="#guide">ガイド</a>
     <a href="#price">価格</a>
   </div>
+  <a class="nav-cta-free" href="https://spell-craft-jp.github.io/spell-craft/free.html" target="_blank">無料で試す</a>
   <a class="nav-cta" href="https://spell-craft.booth.pm/items/8485120" target="_blank">BOOTHで購入 →</a>
 </nav>
 
@@ -823,7 +888,8 @@ footer {
       <a class="btn-hero-primary" href="https://spell-craft.booth.pm/items/8485120" target="_blank">
         BOOTHで購入する <span class="arr">→</span>
       </a>
-      <a class="btn-hero-secondary" href="#how">使い方を見る</a>
+      <a class="btn-hero-free" href="https://spell-craft-jp.github.io/spell-craft/free.html" target="_blank">✨ 無料で試す</a>
+    <a class="btn-hero-secondary" href="#how">使い方を見る</a>
     </div>
     <div class="hero-meta">
       <div class="hero-price-tag">
@@ -834,6 +900,7 @@ footer {
       <div class="hero-badge">🎉 アップデート永久無料</div>
       <div class="hero-badge" style="background:rgba(79,70,229,.08);color:var(--accent2);border:1px solid rgba(79,70,229,.15)">🇯🇵 英語力ゼロでOK</div>
     <div class="hero-badge" style="background:rgba(255,77,28,.08);color:var(--accent);border:1px solid rgba(255,77,28,.2)">⏰ 先行価格 ¥1,200（通常 ¥1,800）</div>
+    <div class="hero-badge" style="background:rgba(52,211,153,.08);color:#059669;border:1px solid rgba(52,211,153,.2)">🔌 A1111不要・どのAIでも使える</div>
     </div>
   </div>
 
@@ -848,6 +915,7 @@ footer {
 <div class="ai-strip">
   <div class="ai-strip-inner">
     <span class="ai-strip-label">対応AI</span>
+    <span style="font-size:11px;color:var(--muted)">A1111・ComfyUI不要。どの生成AIでもそのまま使えます。</span>
     <div class="ai-badges">
       <span class="ai-badge highlight">Stable Diffusion</span>
       <span class="ai-badge">NovelAI</span>
@@ -859,6 +927,19 @@ footer {
     </div>
   </div>
 </div>
+
+
+<!-- FREE VERSION BANNER -->
+<section class="free-version-section">
+  <div class="free-version-inner">
+    <div class="free-version-badge">🆓 FREE</div>
+    <div class="free-version-text">
+      <strong>まず無料で試せます</strong>
+      <span>インストール不要・登録不要。ブラウザで今すぐ体験できる無料版を公開中。カスタムタグ20個・プリセット3個まで無料で使えます。</span>
+    </div>
+    <a class="free-version-btn" href="https://spell-craft-jp.github.io/spell-craft/free.html" target="_blank">無料版を試す →</a>
+  </div>
+</section>
 
 <!-- DEMO -->
 <section class="demo-strip">
@@ -1075,6 +1156,7 @@ footer {
           <div class="target-item">スタイル別にプリセットを使い分けたい</div>
           <div class="target-item">タグをCSV/JSONで管理・バックアップしたい</div>
           <div class="target-item">複数のAIツールでプロンプトを使い回したい</div>
+            <div class="target-item">A1111の拡張機能に縛られず使いたい</div>
         </div>
       </div>
     </div>
@@ -1275,6 +1357,7 @@ footer {
         <div class="price-feature">購入後アップデート無料</div>
       </div>
       <a class="price-btn" href="https://spell-craft.booth.pm/items/8485120" target="_blank">BOOTHで購入する →</a>
+      <a class="price-btn-free" href="https://spell-craft-jp.github.io/spell-craft/free.html" target="_blank">✨ まず無料版を試す</a>
     </div>
   </div>
   <div>
@@ -1312,6 +1395,7 @@ footer {
   <a class="btn-cta reveal delay-2" href="https://spell-craft.booth.pm/items/8485120" target="_blank">
     BOOTHで購入する ¥1,200（先行価格） <span class="arr">→</span>
   </a>
+  <p class="reveal delay-3" style="margin-top:16px;position:relative;z-index:1"><a href="https://spell-craft-jp.github.io/spell-craft/free.html" target="_blank" style="color:rgba(255,255,255,.7);font-size:14px;font-weight:700;text-decoration:underline;text-underline-offset:3px">✨ まず無料版を試してみる →</a></p>
 </section>
 
 <!-- FOOTER -->

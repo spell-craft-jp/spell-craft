@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>呪文帳 Craft — 無料版</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4ff;
+    --surface: #ffffff;
+    --surface2: #e8eef8;
+    --border: rgba(100,120,200,0.15);
+    --text: #1e2a4a;
+    --muted: #7a8baa;
+    --accent: #0ea5e9;
+    --accent2: #6366f1;
+    --danger: #ef4444;
+    --success: #10b981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  /* ── header ── */
+  header {
+    background: linear-gradient(180deg, #dde8ff 0%, rgba(240,244,255,0) 100%);
+    padding: 32px 24px 20px;
+    text-align: center;
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 22px; font-weight: 900; letter-spacing: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .version-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    padding: 3px 9px; border-radius: 999px;
+    background: rgba(99,102,241,.1); color: var(--accent2);
+    border: 1px solid rgba(99,102,241,.2);
+    -webkit-text-fill-color: var(--accent2);
+    vertical-align: middle; font-family: 'JetBrains Mono', monospace;
+  }
+  header p { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .header-stats {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 6px; font-size: 11px; color: var(--muted);
+  }
+  .header-stat-chip {
+    padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700;
+    background: rgba(14,165,233,.08); color: var(--accent);
+    border: 1px solid rgba(14,165,233,.15);
+    transition: all .2s;
+  }
+  .header-stat-chip.has-sel {
+    background: rgba(99,102,241,.1); color: var(--accent2);
+    border-color: rgba(99,102,241,.2);
+  }
+
+  /* ── tabs ── */
+  .tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    background: var(--surface);
+  }
+  .tab {
+    padding: 12px 20px; font-size: 13px; font-weight: 700;
+    color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all .2s; white-space: nowrap;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── main layout ── */
+  .view { display: none; padding: 20px 20px; max-width: 900px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  /* ── presets ── */
+  .presets-row {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+  }
+  .preset-btn {
+    padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    border: 1px solid rgba(129,140,248,.35);
+    background: rgba(129,140,248,.08); color: #a5b4fc;
+    cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .preset-btn:hover { background: rgba(129,140,248,.22); }
+  .preset-btn.reset { border-color: rgba(248,113,113,.35); background: rgba(248,113,113,.08); color: #fca5a5; }
+  .preset-btn.reset:hover { background: rgba(248,113,113,.22); }
+
+  /* ── category card ── */
+  .cat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .cat-card:hover { border-color: rgba(99,102,241,0.25); box-shadow: 0 4px 16px rgba(99,102,241,0.08); }
+  .cat-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    cursor: default;
+  }
+  .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cat-label { font-size: 13px; font-weight: 700; flex: 1; }
+  .cat-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.06); color: var(--muted);
+  }
+  .cat-chips { padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    padding: 6px 13px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--border);
+    background: rgba(255,255,255,.7); color: var(--muted);
+    cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    box-shadow: 0 1px 3px rgba(100,120,200,0.08);
+  }
+  .chip:hover { background: rgba(99,102,241,.08); color: var(--text); border-color: rgba(99,102,241,.3); }
+  .chip.selected { color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+
+  /* ── custom input ── */
+  .custom-row {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .custom-input {
+    flex: 1; padding: 10px 14px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font-size: 13px; outline: none;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    transition: border-color .2s;
+  }
+  .custom-input:focus { border-color: var(--accent2); }
+  .custom-input::placeholder { color: var(--muted); }
+
+  /* ── output box ── */
+  .output-area { margin-top: 8px; }
+  .output-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px; margin-bottom: 12px; overflow: hidden;
+  }
+  .output-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; background: var(--surface2);
+  }
+  .output-label { font-size: 12px; font-weight: 700; }
+  .copy-btn {
+    padding: 5px 14px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    border: 1.5px solid; cursor: pointer; transition: all .2s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .copy-btn.pos { border-color: var(--success); color: var(--success); background: transparent; }
+  .copy-btn.pos.done { background: var(--success); color: #fff; }
+  .copy-btn.neg { border-color: var(--danger); color: var(--danger); background: transparent; }
+  .copy-btn.neg.done { background: var(--danger); color: #fff; }
+  .output-text {
+    padding: 12px 16px; font-size: 12px; line-height: 1.8;
+    font-family: 'JetBrains Mono', monospace; color: #334155;
+    word-break: break-all; min-height: 44px;
+  }
+  .output-empty {
+    padding: 40px 20px; text-align: center;
+    color: var(--muted); font-size: 13px;
+    border: 2px dashed var(--border); border-radius: 14px;
+  }
+
+  /* ── EDITOR VIEW ── */
+  .editor-grid {
+    display: grid; grid-template-columns: 220px 1fr; gap: 16px;
+  }
+  @media (max-width: 640px) { .editor-grid { grid-template-columns: 1fr; } }
+
+  .cat-list-panel {
+    background: var(--surface); border-radius: 14px;
+    border: 1px solid var(--border); overflow: hidden;
+  }
+  .cat-list-title {
+    padding: 10px 14px; font-size: 11px; font-weight: 700;
+    color: var(--muted); letter-spacing: 1px;
+    background: var(--surface2); border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+  }
+  .cat-list-item {
+    padding: 10px 14px; font-size: 13px; cursor: pointer;
+    border-bottom: 1px solid var(--border); transition: background .15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cat-list-item:last-child { border-bottom: none; }
+  .cat-list-item:hover { background: var(--surface2); }
+  .cat-list-item.active { background: rgba(94,234,212,.08); color: var(--accent); }
+  .cat-list-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  .edit-panel {
+    background: var(--surface); border-radius: 14px;
+    border: 1px solid var(--border); padding: 18px;
+  }
+  .edit-panel h3 { font-size: 14px; font-weight: 900; margin-bottom: 16px; color: var(--accent); }
+  .field-row { margin-bottom: 14px; }
+  .field-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .field-input {
+    width: 100%; padding: 9px 12px; border-radius: 9px;
+    border: 1px solid var(--border); background: #f8faff;
+    color: var(--text); font-size: 13px; outline: none;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    transition: border-color .2s;
+  }
+  .field-input:focus { border-color: var(--accent2); }
+  .toggle-row { display: flex; gap: 8px; }
+  .toggle-opt {
+    flex: 1; padding: 7px; text-align: center; border-radius: 8px;
+    border: 1.5px solid var(--border); cursor: pointer; font-size: 12px; font-weight: 700;
+    color: var(--muted); transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .toggle-opt.on { border-color: var(--accent); color: var(--accent); background: rgba(94,234,212,.08); }
+
+  .options-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+  .option-row input {
+    padding: 7px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: #f8faff;
+    color: var(--text); font-size: 12px; outline: none;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .option-row input:focus { border-color: var(--accent2); }
+  .del-btn {
+    width: 28px; height: 28px; border-radius: 7px;
+    border: 1px solid rgba(248,113,113,.3); background: rgba(248,113,113,.07);
+    color: #f87171; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .del-btn:hover { background: rgba(248,113,113,.2); }
+
+  .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .action-btn {
+    padding: 7px 14px; border-radius: 9px; font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .btn-teal { border: 1.5px solid var(--accent); color: var(--accent); background: rgba(94,234,212,.07); }
+  .btn-teal:hover { background: rgba(94,234,212,.18); }
+  .btn-indigo { border: 1.5px solid var(--accent2); color: var(--accent2); background: rgba(129,140,248,.07); }
+  .btn-indigo:hover { background: rgba(129,140,248,.18); }
+  .btn-red { border: 1.5px solid var(--danger); color: var(--danger); background: rgba(248,113,113,.07); }
+  .btn-red:hover { background: rgba(248,113,113,.18); }
+  .btn-save {
+    border: none; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: #fff; font-weight: 900; padding: 8px 20px; border-radius: 9px;
+    cursor: pointer; font-size: 13px;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+  }
+
+  .color-swatches { display: flex; gap: 7px; flex-wrap: wrap; }
+  .swatch {
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+    border: 2.5px solid transparent; transition: transform .15s;
+  }
+  .swatch:hover { transform: scale(1.18); }
+  .swatch.selected { border-color: #1e2a4a; }
+
+  .section-sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .info-tip { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  /* ── CSV ── */
+  .csv-toolbar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, rgba(14,165,233,.06), rgba(99,102,241,.06));
+    border-bottom: 1px solid var(--border);
+  }
+  .csv-toolbar span { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-right: 4px; }
+  .btn-csv-export {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--accent); color: var(--accent);
+    background: rgba(14,165,233,.07); cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif; display:flex; align-items:center; gap:5px;
+  }
+  .btn-csv-export:hover { background: rgba(14,165,233,.18); }
+  .btn-csv-import {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--accent2); color: var(--accent2);
+    background: rgba(99,102,241,.07); cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif; display:flex; align-items:center; gap:5px;
+  }
+  .btn-csv-import:hover { background: rgba(99,102,241,.18); }
+  #csv-file-input { display: none; }
+
+  /* ── DRAG & DROP ── */
+  .cat-list-item {
+    position: relative;
+  }
+  .drag-handle {
+    cursor: grab; color: var(--muted); font-size: 14px; line-height: 1;
+    padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+    opacity: 0.5; transition: opacity .15s;
+    user-select: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .cat-list-item:hover .drag-handle { opacity: 1; }
+  .cat-list-item.dragging {
+    opacity: 0.4;
+    background: rgba(99,102,241,.08);
+  }
+  .cat-list-item.drag-over {
+    border-top: 2px solid var(--accent2);
+  }
+  .option-row.dragging { opacity: 0.4; }
+  .option-row.drag-over { border-top: 2px solid var(--accent); }
+  .option-row {
+    display: grid; grid-template-columns: 18px 1fr 1fr 28px; gap: 6px; align-items: center;
+  }
+  .opt-drag-handle {
+    cursor: grab; color: var(--muted); font-size: 12px;
+    text-align: center; opacity: 0.4; transition: opacity .15s;
+    user-select: none;
+  }
+  .opt-drag-handle:active { cursor: grabbing; }
+  .option-row:hover .opt-drag-handle { opacity: 1; }
+
+  /* ── ONBOARDING MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(15,25,60,0.45);
+    backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-box {
+    background: #fff; border-radius: 22px;
+    max-width: 480px; width: 100%;
+    box-shadow: 0 24px 64px rgba(30,42,74,0.18);
+    overflow: hidden;
+    animation: modalIn .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes modalIn { from { opacity:0; transform:scale(.92) translateY(16px); } to { opacity:1; transform:none; } }
+  .modal-hero {
+    background: linear-gradient(135deg, #dde8ff 0%, #ede9fe 100%);
+    padding: 32px 28px 24px;
+    text-align: center;
+  }
+  .modal-hero .emoji { font-size: 48px; line-height: 1; display: block; margin-bottom: 12px; }
+  .modal-hero h2 {
+    font-size: 20px; font-weight: 900; letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .modal-hero p { font-size: 12px; color: var(--muted); }
+  .modal-body { padding: 22px 28px 28px; }
+  .modal-features { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .modal-feature {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px; border-radius: 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+  .modal-feature .icon { font-size: 20px; flex-shrink: 0; line-height: 1.3; }
+  .modal-feature-text strong { font-size: 13px; display: block; margin-bottom: 2px; }
+  .modal-feature-text span { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .btn-start {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: #fff; font-size: 15px; font-weight: 900; cursor: pointer;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    box-shadow: 0 4px 16px rgba(99,102,241,0.3);
+    transition: transform .15s, box-shadow .15s;
+    letter-spacing: 1px;
+  }
+  .btn-start:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+  .modal-note { font-size: 10px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+  /* ── BACKUP BAR ── */
+  .backup-bar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 10px 14px;
+    background: linear-gradient(90deg, rgba(16,185,129,.05), rgba(99,102,241,.05));
+    border-bottom: 1px solid var(--border);
+  }
+  .backup-bar span { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .8px; margin-right: 4px; }
+  .btn-backup {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--success); color: var(--success);
+    background: rgba(16,185,129,.07); cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .btn-backup:hover { background: rgba(16,185,129,.18); }
+  .btn-restore {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--muted); color: var(--muted);
+    background: rgba(120,139,170,.07); cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .btn-restore:hover { background: rgba(120,139,170,.18); color: var(--text); }
+  #restore-file-input { display: none; }
+
+  /* ── PRESETS EDITOR ── */
+  .preset-editor-list { display: flex; flex-direction: column; gap: 10px; }
+  .preset-editor-item {
+    background: var(--surface2); border-radius: 11px;
+    border: 1px solid var(--border); padding: 12px 14px;
+  }
+  .preset-editor-item .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .preset-editor-item input {
+    flex: 1; padding: 7px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: #f8faff;
+    color: var(--text); font-size: 13px; outline: none;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .snapshot-lbl { font-size: 11px; color: var(--muted); }
+
+  /* ── DARK MODE ── */
+  body.dark {
+    --bg: #080b14;
+    --surface: #0f1525;
+    --surface2: #161d30;
+    --border: rgba(255,255,255,0.07);
+    --text: #dde4f0;
+    --muted: #8a96b4; /* 暗背景でのコントラスト改善: 5a6480 → 8a96b4 */
+  }
+  body.dark header { background: linear-gradient(180deg, #0b1020 0%, transparent 100%); }
+  body.dark .chip { background: rgba(255,255,255,.03); }
+  body.dark .chip:hover { background: rgba(255,255,255,.07); }
+  body.dark .field-input,
+  body.dark .option-row input,
+  body.dark .preset-editor-item input { background: var(--bg); }
+  body.dark .modal-box { background: #0f1525; }
+  body.dark .modal-hero { background: linear-gradient(135deg, #1a2040 0%, #1e1a40 100%); }
+  body.dark .custom-input { background: var(--surface); }
+  /* ダークモード時の補助テキストをさらに読みやすく */
+  body.dark .cat-badge { background: rgba(255,255,255,.1); color: #a0aec0; }
+  body.dark .info-tip { color: #8a96b4; }
+  body.dark .csv-toolbar span,
+  body.dark .backup-bar span { color: #8a96b4; }
+  body.dark .cat-list-title { color: #8a96b4; }
+  body.dark .help-item-text span { color: #8a96b4; }
+  body.dark .shortcut-table td:last-child { color: #8a96b4; }
+  body.dark .spec-val { color: #8a96b4; }
+  body.dark .output-text { color: #c8d0e0; } /* 出力プロンプトも明るく */
+
+  .theme-toggle {
+    position: fixed; bottom: 24px; right: 20px; z-index: 100;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .theme-toggle:hover { transform: scale(1.1); box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
+
+  /* ── TAG SEARCH ── */
+  .search-bar-wrap {
+    position: sticky; top: 0; z-index: 40;
+    padding: 10px 20px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .search-bar {
+    width: 100%; max-width: 900px; margin: 0 auto; display: block;
+    padding: 10px 16px 10px 38px;
+    border-radius: 10px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text);
+    font-size: 13px; outline: none;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    transition: border-color .2s;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8baa' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 12px center;
+  }
+  .search-bar:focus { border-color: var(--accent2); }
+  .search-bar::placeholder { color: var(--muted); }
+  .chip.hidden { display: none; }
+  .cat-card.all-hidden { display: none; }
+  .search-empty {
+    text-align: center; color: var(--muted); font-size: 13px;
+    padding: 40px 20px;
+  }
+
+  /* ── HELP TAB ── */
+  .help-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 640px) { .help-grid { grid-template-columns: 1fr; } }
+  .help-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+  }
+  .help-card-hd {
+    display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px; background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 900;
+  }
+  .help-card-hd .hicon { font-size: 18px; }
+  .help-card-body { padding: 14px 16px; }
+  .help-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px; line-height: 1.6;
+  }
+  .help-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .help-item-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .help-item-text strong { display: block; font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .help-item-text span { font-size: 12px; color: var(--muted); }
+
+  .shortcut-table { width: 100%; border-collapse: collapse; }
+  .shortcut-table tr { border-bottom: 1px solid var(--border); }
+  .shortcut-table tr:last-child { border-bottom: none; }
+  .shortcut-table td { padding: 9px 4px; font-size: 12px; vertical-align: middle; }
+  .shortcut-table td:first-child { width: 44%; }
+  .kbd {
+    display: inline-block; padding: 3px 8px; border-radius: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+    color: var(--text); white-space: nowrap;
+    box-shadow: 0 2px 0 var(--border);
+  }
+  .help-version-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px; border-radius: 12px;
+    background: linear-gradient(90deg, rgba(14,165,233,.07), rgba(99,102,241,.07));
+    border: 1px solid rgba(99,102,241,.15); margin-bottom: 20px;
+  }
+  .help-version-banner .vb-left { font-size: 14px; font-weight: 900; }
+  .help-version-banner .vb-right { font-size: 12px; color: var(--muted); }
+  .help-section-title {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin: 20px 0 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .help-section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── FREE VERSION LOCKED FEATURES ── */
+  .locked-feature {
+    position: relative; opacity: .5; pointer-events: none;
+    user-select: none;
+  }
+  .locked-feature::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      -45deg, transparent, transparent 4px,
+      rgba(120,130,160,0.15) 4px, rgba(120,130,160,0.15) 5px
+    );
+    border-radius: 8px;
+    pointer-events: none;
+  }
+  .locked-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 999px; padding: 3px 10px;
+    pointer-events: none;
+  }
+  .locked-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .preset-limit-info {
+    font-size: 11px; color: var(--muted); padding: 6px 0;
+  }
+  .preset-limit-info span { color: var(--accent); font-weight: 700; }
+  .free-banner {
+    background: linear-gradient(90deg, rgba(14,165,233,.08), rgba(99,102,241,.08));
+    border-bottom: 1px solid rgba(99,102,241,.15);
+    padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .free-banner-text {
+    font-size: 12px; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .free-banner-text strong { color: var(--text); }
+  .free-limit-bar {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+  }
+  .free-limit-track {
+    width: 100px; height: 6px; border-radius: 999px;
+    background: var(--surface2); overflow: hidden;
+  }
+  .free-limit-fill {
+    height: 100%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .3s;
+  }
+  .free-limit-fill.warning { background: #f59e0b; }
+  .free-limit-fill.full { background: var(--danger); }
+  .btn-upgrade {
+    padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: #fff; border: none; cursor: pointer;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    text-decoration: none; display: inline-block;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+  }
+  .btn-upgrade:hover { opacity: .9; }
+  .tag-limit-warning {
+    display: none; padding: 12px 16px; border-radius: 10px;
+    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+    font-size: 13px; color: var(--danger); margin: 12px 0;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📖 呪文帳 Craft <span class="version-badge">無料版</span></h1>
+  <p>タグを選ぶだけで、英語プロンプト完成。カスタムタグは20個まで追加できます。</p>
+  <div class="header-stats" id="header-stats" style="display:none">
+    <span id="stat-cats" class="header-stat-chip has-sel"></span>
+    <span id="stat-tags" class="header-stat-chip has-sel"></span>
+  </div>
+</header>
+
+<!-- ═══ FREE VERSION BANNER ═══ -->
+<div class="free-banner" id="free-banner">
+  <div class="free-banner-text">
+    <span>🆓 無料版</span>
+    <strong>カスタムタグ残り <span id="free-limit-count">20</span> 個</strong>
+  </div>
+  <div class="free-limit-bar">
+    <div class="free-limit-track">
+      <div class="free-limit-fill" id="free-limit-fill" style="width:0%"></div>
+    </div>
+    <a class="btn-upgrade" href="https://spell-craft.booth.pm/items/8485120" target="_blank">フル版を購入 ¥1,200</a>
+  </div>
+</div>
+<div class="modal-overlay" id="onboarding-modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-hero">
+      <span class="emoji">🎨</span>
+      <h2>呪文帳 Craft</h2>
+      <p>タグを選ぶだけで、英語プロンプト完成。</p>
+    </div>
+    <div class="modal-body">
+      <div class="modal-features">
+        <div class="modal-feature">
+          <span class="icon">🖱️</span>
+          <div class="modal-feature-text">
+            <strong>クリックだけでプロンプト生成</strong>
+            <span>日本語タグを選ぶと英語プロンプトに変換。コピペ不要で即使えます。</span>
+          </div>
+        </div>
+        <div class="modal-feature">
+          <span class="icon">✏️</span>
+          <div class="modal-feature-text">
+            <strong>カテゴリ・タグを自由にカスタマイズ</strong>
+            <span>「⚙️ カテゴリ編集」タブで自分だけのタグ辞書を育てられます。</span>
+          </div>
+        </div>
+        <div class="modal-feature">
+          <span class="icon">⚡</span>
+          <div class="modal-feature-text">
+            <strong>プリセットでワンクリック切り替え</strong>
+            <span>よく使う組み合わせをプリセット保存。スタイルをすばやく切り替えられます。</span>
+          </div>
+        </div>
+        <div class="modal-feature">
+          <span class="icon">💾</span>
+          <div class="modal-feature-text">
+            <strong>データはすべてブラウザ内に保存</strong>
+            <span>インターネット不要・アカウント不要。CSVやJSONでバックアップも可能。</span>
+          </div>
+        </div>
+        <div class="modal-feature">
+          <span class="icon">⌨️</span>
+          <div class="modal-feature-text">
+            <strong>キーボードショートカット対応</strong>
+            <span><code style="font-family:monospace;background:var(--surface2);padding:1px 5px;border-radius:4px">Ctrl+P</code> コピー　<code style="font-family:monospace;background:var(--surface2);padding:1px 5px;border-radius:4px">Ctrl+R</code> リセット　<code style="font-family:monospace;background:var(--surface2);padding:1px 5px;border-radius:4px">/</code> 検索</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-start" onclick="closeOnboarding()">さっそく使ってみる →</button>
+      <p class="modal-note">次回起動時はこの画面は表示されません</p>
+    </div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="builder">🖼 ビルダー</div>
+  <div class="tab" data-tab="editor">⚙️ カテゴリ編集</div>
+  <div class="tab" data-tab="presets">⚡ プリセット編集</div>
+  <div class="tab" data-tab="help">❓ ヘルプ</div>
+</div>
+
+<!-- 検索バー（ビルダータブ専用） -->
+<div class="search-bar-wrap" id="search-bar-wrap">
+  <input class="search-bar" id="tag-search" placeholder="🔍 タグを検索… 例: アニメ、夕暮れ、全身" oninput="filterTags(this.value)">
+</div>
+
+<!-- ダークモード切り替え -->
+<div class="locked-feature" style="position:fixed;bottom:24px;right:20px;z-index:100;" title="有料版のみ">
+  <button class="theme-toggle" style="cursor:not-allowed">🔒</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 1: BUILDER
+═══════════════════════════════════════════ -->
+<div class="view active" id="view-builder">
+
+  <div class="presets-row" id="presets-row"></div>
+
+  <div id="cats-container"></div>
+
+  <!-- custom -->
+  <div style="margin-bottom:20px">
+    <div class="field-label" style="margin-bottom:8px">✏️ 追加のプロンプト（自由入力）</div>
+    <input class="custom-input" id="custom-pos" placeholder="例: wearing red dress, long hair...">
+  </div>
+  <div style="margin-bottom:24px">
+    <div class="field-label" style="margin-bottom:8px">🚫 追加のネガティブプロンプト（自由入力）</div>
+    <input class="custom-input" id="custom-neg" placeholder="例: bad anatomy, blurry...">
+  </div>
+
+  <div class="output-area" id="output-area">
+    <div class="output-empty">⬆️ 上の項目を選ぶとここにプロンプトが表示されます</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 2: CATEGORY EDITOR
+═══════════════════════════════════════════ -->
+<div class="view" id="view-editor">
+  <div class="csv-toolbar">
+    <span>💾 CSV管理</span>
+    <div class="locked-row">
+      <div class="locked-feature">
+        <button class="btn-csv-export">⬇️ CSVで書き出し</button>
+      </div>
+      <div class="locked-feature">
+        <button class="btn-csv-import">⬆️ CSVから読み込み</button>
+      </div>
+      <span class="locked-badge">🔒 有料版のみ</span>
+      <a href="https://spell-craft.booth.pm/items/8485120" target="_blank" class="btn-upgrade" style="font-size:11px;padding:4px 12px">フル版で使う</a>
+    </div>
+  </div>
+  <div class="backup-bar">
+    <span>🗂 全データ</span>
+    <div class="locked-row">
+      <div class="locked-feature">
+        <button class="btn-backup">📦 JSONバックアップ</button>
+      </div>
+      <div class="locked-feature">
+        <button class="btn-restore">📂 JSONから復元</button>
+      </div>
+      <span class="locked-badge">🔒 有料版のみ</span>
+      <a href="https://spell-craft.booth.pm/items/8485120" target="_blank" class="btn-upgrade" style="font-size:11px;padding:4px 12px">フル版で使う</a>
+    </div>
+  </div>
+  <div class="editor-grid" style="margin-top:14px">
+    <div>
+      <div class="cat-list-panel" id="editor-cat-list"></div>
+      <button class="action-btn btn-teal" style="margin-top:10px;width:100%" onclick="addCategory()">＋ カテゴリ追加</button>
+    </div>
+    <div class="edit-panel" id="edit-panel">
+      <div style="color:var(--muted);font-size:13px;padding:30px 0;text-align:center">
+        ← 左のカテゴリを選択してください
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 3: PRESET EDITOR
+═══════════════════════════════════════════ -->
+<div class="view" id="view-presets">
+  <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="action-btn btn-teal" onclick="addPreset()">＋ プリセット追加</button>
+    <span class="info-tip">現在の選択状態をスナップショットして保存できます</span>
+  </div>
+  <div class="preset-limit-info">プリセット残り <span id="preset-limit-count">3</span> 個（無料版は3個まで）　<a href="https://spell-craft.booth.pm/items/8485120" target="_blank" style="color:var(--accent);font-weight:700;font-size:11px">フル版で無制限に →</a></div>
+  <div class="preset-editor-list" id="preset-editor-list"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAB 4: HELP
+═══════════════════════════════════════════ -->
+<div class="view" id="view-help">
+
+  <div class="help-version-banner">
+    <div class="vb-left">📖 呪文帳 Craft <span class="version-badge" style="font-size:11px">v1.0.0</span></div>
+    <div class="vb-right">ご購入ありがとうございます 🎉</div>
+  </div>
+
+  <div class="help-section-title">基本の使い方</div>
+  <div class="help-grid">
+    <div class="help-card">
+      <div class="help-card-hd"><span class="hicon">🖼</span>ビルダータブ</div>
+      <div class="help-card-body">
+        <div class="help-item">
+          <span class="help-item-icon">🖱️</span>
+          <div class="help-item-text">
+            <strong>タグをクリックで選択</strong>
+            <span>選んだタグが自動的に英語プロンプトに変換されます。もう一度クリックで解除。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">📋</span>
+          <div class="help-item-text">
+            <strong>プロンプトをコピー</strong>
+            <span>ポジティブ・ネガティブそれぞれ「コピー」ボタンで一発コピー。SDにそのまま貼り付けできます。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">🔍</span>
+          <div class="help-item-text">
+            <strong>タグを検索</strong>
+            <span>上部の検索バーに入力すると、日本語・英語どちらでもタグを絞り込めます。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">⚡</span>
+          <div class="help-item-text">
+            <strong>プリセットで一発切り替え</strong>
+            <span>上部のプリセットボタンをクリックすると、保存済みの組み合わせを呼び出せます。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="help-card">
+      <div class="help-card-hd"><span class="hicon">⚙️</span>カテゴリ編集タブ</div>
+      <div class="help-card-body">
+        <div class="help-item">
+          <span class="help-item-icon">➕</span>
+          <div class="help-item-text">
+            <strong>カテゴリ・タグの追加</strong>
+            <span>「＋ カテゴリ追加」でカテゴリを作成。日本語ラベルと英語プロンプトをセットで入力します。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">⠿</span>
+          <div class="help-item-text">
+            <strong>ドラッグで並び替え</strong>
+            <span>カテゴリ一覧・タグ一覧左端の「⠿」ハンドルをドラッグすると並び順を変えられます。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">🎨</span>
+          <div class="help-item-text">
+            <strong>カラー・タイプの設定</strong>
+            <span>カテゴリごとにカラー、単一/複数選択、ポジティブ/ネガティブを設定できます。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">✅</span>
+          <div class="help-item-text">
+            <strong>必ず「保存して反映」を押す</strong>
+            <span>編集後は必ずボタンを押してください。押さないと変更が反映されません。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="help-card">
+      <div class="help-card-hd"><span class="hicon">💾</span>データのバックアップ</div>
+      <div class="help-card-body">
+        <div class="help-item">
+          <span class="help-item-icon">📦</span>
+          <div class="help-item-text">
+            <strong>JSONバックアップ（推奨）</strong>
+            <span>カテゴリ・タグ・プリセットをまとめて保存。ブラウザを変えても復元できます。定期的に取ることを推奨。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">📊</span>
+          <div class="help-item-text">
+            <strong>CSVエクスポート</strong>
+            <span>タグデータをCSV形式で書き出し。Excelで編集して読み込み直すことも可能です。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">⚠️</span>
+          <div class="help-item-text">
+            <strong>ブラウザのデータ消去に注意</strong>
+            <span>「閲覧データを消去」するとデータが消えることがあります。定期的にJSONバックアップを取ってください。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="help-card">
+      <div class="help-card-hd"><span class="hicon">⚡</span>プリセット編集タブ</div>
+      <div class="help-card-body">
+        <div class="help-item">
+          <span class="help-item-icon">📸</span>
+          <div class="help-item-text">
+            <strong>今の選択をプリセット化</strong>
+            <span>ビルダーで好みの組み合わせを作ったら「⚡ プリセット編集」→「＋ プリセット追加」で保存できます。</span>
+          </div>
+        </div>
+        <div class="help-item">
+          <span class="help-item-icon">🔄</span>
+          <div class="help-item-text">
+            <strong>スナップショット更新</strong>
+            <span>既存プリセットの内容を現在の選択状態で上書きできます。</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="help-section-title">キーボードショートカット</div>
+  <div class="help-card" style="margin-bottom:24px">
+    <div class="help-card-hd"><span class="hicon">⌨️</span>ショートカット一覧</div>
+    <div class="help-card-body">
+      <table class="shortcut-table">
+        <tr>
+          <td><span class="kbd">Ctrl</span> + <span class="kbd">P</span></td>
+          <td style="color:var(--muted)">ポジティブプロンプトをコピー</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">Ctrl</span> + <span class="kbd">Shift</span> + <span class="kbd">P</span></td>
+          <td style="color:var(--muted)">ネガティブプロンプトをコピー</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">Ctrl</span> + <span class="kbd">R</span></td>
+          <td style="color:var(--muted)">選択をすべてリセット</td>
+        </tr>
+        <tr>
+          <td><span class="kbd">/</span></td>
+          <td style="color:var(--muted)">検索バーにフォーカス</td>
+        </tr>
+      </table>
+      <p class="info-tip" style="margin-top:10px">※ Macの場合は Ctrl → Cmd に読み替えてください</p>
+    </div>
+  </div>
+
+  <div class="help-section-title">よくある質問</div>
+  <div class="help-card">
+    <div class="help-card-hd"><span class="hicon">❓</span>FAQ</div>
+    <div class="help-card-body">
+      <div class="help-item">
+        <span class="help-item-icon">🌐</span>
+        <div class="help-item-text">
+          <strong>インターネットがない環境でも使える？</strong>
+          <span>初回起動時のみフォント読み込みにネットが必要ですが、それ以降はオフラインで動作します。</span>
+        </div>
+      </div>
+      <div class="help-item">
+        <span class="help-item-icon">💻</span>
+        <div class="help-item-text">
+          <strong>別のPCでも使いたい</strong>
+          <span>HTMLファイルをコピーして「JSONバックアップ」を復元すれば、別PCでも同じ環境を再現できます。</span>
+        </div>
+      </div>
+      <div class="help-item">
+        <span class="help-item-icon">🗑️</span>
+        <div class="help-item-text">
+          <strong>データをリセットしたい</strong>
+          <span>ブラウザの開発者ツール（F12）→「アプリケーション」→「ローカルストレージ」から jc_craft_data を削除するとリセットできます。</span>
+        </div>
+      </div>
+      <div class="help-item">
+        <span class="help-item-icon">🔄</span>
+        <div class="help-item-text">
+          <strong>アップデートはどうやって受け取る？</strong>
+          <span>BOOTHのダウンロードページから最新版のHTMLを再ダウンロードできます。JSONバックアップを取ってから差し替えてください。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────
+const COLORS = ["#5eead4","#818cf8","#f472b6","#fb923c","#facc15","#34d399","#60a5fa","#c084fc","#f87171","#a3e635"];
+
+let data = {
+  categories: [
+    { id:"subject", label:"🎨 被写体", color:"#f472b6", single:false, negative:false, options:[
+      {ja:"女性",en:"1girl"},{ja:"男性",en:"1boy"},{ja:"少女",en:"1girl, young"},
+      {ja:"複数の女性",en:"2girls"},{ja:"カップル",en:"1boy, 1girl, couple"},
+      {ja:"猫",en:"cat"},{ja:"犬",en:"dog"},{ja:"ドラゴン",en:"dragon"},
+      {ja:"風景（人なし）",en:"scenery, no humans"},{ja:"建物・都市",en:"architecture, cityscape"},
+      {ja:"花・植物",en:"flowers, plants, botanical"},{ja:"食べ物",en:"food, still life"},
+      {ja:"乗り物",en:"vehicle"},{ja:"宇宙・惑星",en:"space, planets, cosmos"},
+    ]},
+    { id:"style", label:"🖌️ スタイル", color:"#818cf8", single:true, negative:false, options:[
+      {ja:"アニメ風",en:"anime style, anime screencap"},{ja:"リアル・写真",en:"photorealistic, hyperrealistic, 8k"},
+      {ja:"水彩画",en:"watercolor painting, soft edges"},{ja:"油絵",en:"oil painting, impasto"},
+      {ja:"マンガ風",en:"manga style, black and white lineart"},{ja:"ピクセルアート",en:"pixel art, 16bit"},
+      {ja:"3DCG",en:"3d render, octane render, blender"},{ja:"スケッチ",en:"pencil sketch, hand drawn"},
+      {ja:"サイバーパンク",en:"cyberpunk, neon lights, futuristic"},{ja:"ファンタジー",en:"fantasy art, magical, ethereal"},
+      {ja:"ローポリ",en:"low poly, geometric, flat shading"},{ja:"水墨画",en:"ink wash painting, sumi-e, traditional"},
+      {ja:"ステンドグラス",en:"stained glass, colorful mosaic"},{ja:"切り絵",en:"paper cut art, silhouette"},
+    ]},
+    { id:"quality", label:"✨ クオリティ", color:"#34d399", single:false, negative:false, options:[
+      {ja:"高品質",en:"masterpiece, best quality"},{ja:"超高解像度",en:"ultra-detailed, 8k uhd"},
+      {ja:"美しい照明",en:"beautiful lighting, cinematic lighting"},{ja:"鮮明な輪郭",en:"sharp focus, crisp lines"},
+      {ja:"映画的",en:"cinematic, film grain"},{ja:"プロ撮影",en:"professional photography, DSLR"},
+      {ja:"賞受賞レベル",en:"award winning art, trending on artstation"},
+      {ja:"被写界深度",en:"depth of field, bokeh background"},
+    ]},
+    { id:"character", label:"👗 キャラクター", color:"#fb923c", single:false, negative:false, options:[
+      {ja:"長い髪",en:"long hair"},{ja:"短い髪",en:"short hair"},{ja:"ツインテール",en:"twin tails"},
+      {ja:"銀髪",en:"silver hair"},{ja:"金髪",en:"blonde hair"},{ja:"黒髪",en:"black hair"},
+      {ja:"青い瞳",en:"blue eyes"},{ja:"赤い瞳",en:"red eyes"},
+      {ja:"制服",en:"school uniform, serafuku"},{ja:"和服・着物",en:"kimono, japanese clothes"},
+      {ja:"ドレス",en:"elegant dress, formal wear"},{ja:"鎧・戦士",en:"armor, warrior"},
+      {ja:"ウィッチ",en:"witch hat, magic staff"},{ja:"メイド",en:"maid outfit"},
+    ]},
+    { id:"mood", label:"🌈 雰囲気・光", color:"#facc15", single:true, negative:false, options:[
+      {ja:"昼間・明るい",en:"daytime, bright sunlight"},{ja:"夕暮れ・黄金時間",en:"golden hour, sunset, warm colors"},
+      {ja:"夜・暗い",en:"night, dark atmosphere, moonlight"},{ja:"霧・幻想的",en:"foggy, misty, dreamy atmosphere"},
+      {ja:"雨・しっとり",en:"rainy, wet reflections, moody"},{ja:"雪・冬",en:"snowy, winter, cold"},
+      {ja:"ネオン・都市夜景",en:"neon lights, night city, glowing"},{ja:"明るい室内",en:"indoor lighting, warm interior"},
+      {ja:"桜・春",en:"cherry blossoms, spring, petals falling"},
+      {ja:"夏・太陽",en:"summer, intense sunlight, blue sky"},
+    ]},
+    { id:"composition", label:"📐 構図・アングル", color:"#60a5fa", single:true, negative:false, options:[
+      {ja:"正面",en:"front view, facing viewer"},{ja:"横顔",en:"profile view, side view"},
+      {ja:"上から",en:"from above, bird eye view"},{ja:"下から",en:"from below, looking up"},
+      {ja:"バストアップ",en:"upper body, bust shot"},{ja:"全身",en:"full body shot"},
+      {ja:"顔のアップ",en:"close-up, face focus"},{ja:"広角・パノラマ",en:"wide angle, panoramic"},
+      {ja:"後ろ姿",en:"from behind, back view"},{ja:"動きのあるポーズ",en:"dynamic pose, action pose"},
+    ]},
+    { id:"background", label:"🏞️ 背景", color:"#c084fc", single:true, negative:false, options:[
+      {ja:"シンプル白背景",en:"simple white background, plain background"},
+      {ja:"ボケた自然",en:"blurry nature background, bokeh"},
+      {ja:"街並み",en:"city street, urban background"},
+      {ja:"学校",en:"school, classroom background"},
+      {ja:"和風・神社",en:"japanese shrine, torii gate"},
+      {ja:"宇宙・星空",en:"starry sky, galaxy background"},
+      {ja:"ファンタジー城",en:"fantasy castle, magical forest"},
+      {ja:"ビーチ・海",en:"beach, ocean, seaside"},
+    ]},
+    { id:"negative", label:"🚫 除外（ネガティブ）", color:"#f87171", single:false, negative:true, options:[
+      {ja:"ぼやけ・低画質",en:"blurry, low quality, bad anatomy, worst quality"},
+      {ja:"変な手・指",en:"bad hands, extra fingers, deformed hands, missing fingers"},
+      {ja:"余分な手足",en:"extra limbs, mutated, deformed body"},
+      {ja:"文字・透かし",en:"text, watermark, signature, username"},
+      {ja:"変な顔",en:"bad face, ugly, deformed face, cross-eyed"},
+      {ja:"モノクロ",en:"grayscale, monochrome"},
+      {ja:"フレームアウト",en:"cropped, out of frame, cut off"},
+      {ja:"AI特有のアーティファクト",en:"jpeg artifacts, noise, grain, pixelated"},
+    ]},
+  ],
+  presets: [
+    { id:"p1", label:"✨ アニメ美少女", selections:{ subject:["1girl"], style:["anime style, anime screencap"], character:["long hair","blue eyes"], quality:["masterpiece, best quality","ultra-detailed, 8k uhd"], mood:["golden hour, sunset, warm colors"], composition:["upper body, bust shot"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } },
+    { id:"p2", label:"🌆 サイバーパンク夜景", selections:{ subject:["scenery, no humans"], style:["cyberpunk, neon lights, futuristic"], quality:["masterpiece, best quality","beautiful lighting, cinematic lighting"], mood:["neon lights, night city, glowing"], composition:["wide angle, panoramic"], negative:["blurry, low quality, bad anatomy, worst quality","text, watermark, signature, username"] } },
+    { id:"p3", label:"📸 リアル人物写真", selections:{ subject:["1girl"], style:["photorealistic, hyperrealistic, 8k"], quality:["ultra-detailed, 8k uhd","professional photography, DSLR","depth of field, bokeh background"], mood:["golden hour, sunset, warm colors"], composition:["upper body, bust shot"], negative:["blurry, low quality, bad anatomy, worst quality","bad face, ugly, deformed face, cross-eyed","text, watermark, signature, username"] } },
+    { id:"p4", label:"🌸 和風ファンタジー", selections:{ subject:["1girl"], style:["fantasy art, magical, ethereal"], character:["long hair","black hair","kimono, japanese clothes"], quality:["masterpiece, best quality","beautiful lighting, cinematic lighting"], mood:["cherry blossoms, spring, petals falling"], background:["japanese shrine, torii gate"], composition:["full body shot"], negative:["blurry, low quality, bad anatomy, worst quality","text, watermark, signature, username"] } },
+    { id:"p5", label:"🐉 ファンタジー風景", selections:{ subject:["dragon"], style:["fantasy art, magical, ethereal"], quality:["masterpiece, best quality","award winning art, trending on artstation","cinematic, film grain"], mood:["foggy, misty, dreamy atmosphere"], composition:["wide angle, panoramic"], background:["fantasy castle, magical forest"], negative:["blurry, low quality, bad anatomy, worst quality","text, watermark, signature, username"] } },
+  ]
+};
+
+let builderSel = {}; // { catId: [en, ...] }
+let editingCatId = null;
+
+function save() {
+  try {
+    localStorage.setItem('jc_craft_data', JSON.stringify(data));
+  } catch(e) {
+    showToast('⚠️ 保存に失敗しました（ストレージ容量不足の可能性）');
+  }
+}
+
+// データ読み込み時のエラー耐性
+(function() {
+  try {
+    const raw = localStorage.getItem('jc_craft_data');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.categories && parsed.presets) {
+        data = parsed;
+      } else {
+        throw new Error('invalid structure');
+      }
+    }
+  } catch(e) {
+    localStorage.removeItem('jc_craft_data');
+    showToastDelayed('⚠️ 保存データが破損していたためリセットしました');
+  }
+})();
+function showToastDelayed(msg) {
+  setTimeout(() => showToast(msg), 800);
+}
+
+// ─────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('view-' + t.dataset.tab).classList.add('active');
+    // 検索バーはビルダータブのみ表示
+    const isBuilder = t.dataset.tab === 'builder';
+    document.getElementById('search-bar-wrap').style.display = isBuilder ? '' : 'none';
+    if (!isBuilder) { document.getElementById('tag-search').value = ''; filterTags(''); }
+    if (t.dataset.tab === 'editor') renderEditorList();
+    if (t.dataset.tab === 'presets') renderPresetEditor();
+  });
+});
+
+// ─────────────────────────────────────────────────────
+// BUILDER
+// ─────────────────────────────────────────────────────
+function renderBuilder() {
+  // presets
+  const pr = document.getElementById('presets-row');
+  pr.innerHTML = '';
+  data.presets.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'preset-btn'; b.textContent = p.label;
+    b.onclick = () => { builderSel = JSON.parse(JSON.stringify(p.selections)); renderBuilder(); };
+    pr.appendChild(b);
+  });
+  const hasSel = Object.values(builderSel).some(v=>v.length);
+  if (hasSel) {
+    const r = document.createElement('button');
+    r.className = 'preset-btn reset'; r.textContent = '✕ リセット';
+    r.onclick = () => { builderSel = {}; renderBuilder(); };
+    pr.appendChild(r);
+  }
+
+  // categories
+  const cc = document.getElementById('cats-container');
+  cc.innerHTML = '';
+  data.categories.forEach(cat => {
+    const sel = builderSel[cat.id] || [];
+    const card = document.createElement('div'); card.className = 'cat-card';
+    card.style.borderColor = sel.length ? cat.color+'44' : '';
+
+    const header = document.createElement('div'); header.className = 'cat-header';
+    header.innerHTML = `
+      <span class="cat-dot" style="background:${cat.color}"></span>
+      <span class="cat-label" style="color:${cat.color}">${cat.label}</span>
+      <span class="cat-badge">${cat.negative ? 'ネガティブ' : cat.single ? '単一選択' : '複数選択'}</span>
+    `;
+    const chips = document.createElement('div'); chips.className = 'cat-chips';
+    cat.options.forEach(opt => {
+      const c = document.createElement('button'); c.className = 'chip';
+      if (sel.includes(opt.en)) {
+        c.classList.add('selected');
+        c.style.borderColor = cat.color;
+        c.style.background = cat.color + '22';
+        c.style.color = cat.color;
+      }
+      c.textContent = opt.ja;
+      c.title = opt.en;
+      c.onclick = () => toggleChip(cat.id, opt.en, cat.single);
+      chips.appendChild(c);
+    });
+    card.appendChild(header); card.appendChild(chips);
+    cc.appendChild(card);
+  });
+
+  renderOutput();
+}
+
+function toggleChip(catId, en, single) {
+  // 空文字のenは選択しない
+  if (!en || en.trim() === '') return;
+  if (!builderSel[catId]) builderSel[catId] = [];
+  const arr = builderSel[catId];
+  if (single) {
+    builderSel[catId] = arr.includes(en) ? [] : [en];
+  } else {
+    builderSel[catId] = arr.includes(en) ? arr.filter(x=>x!==en) : [...arr, en];
+  }
+  renderBuilder();
+}
+
+function renderOutput() {
+  // builderSelに残っている古い・無効な選択値を完全にクリーンアップ
+  const validEnSets = {};
+  data.categories.forEach(c => {
+    // 空文字のenを持つオプションは除外
+    validEnSets[c.id] = new Set(c.options.map(o => o.en).filter(en => en && en.trim() !== ''));
+  });
+  Object.keys(builderSel).forEach(catId => {
+    if (!validEnSets[catId]) {
+      delete builderSel[catId];
+    } else {
+      builderSel[catId] = builderSel[catId].filter(en => en && en.trim() !== '' && validEnSets[catId].has(en));
+    }
+    // 空配列になったキーも削除
+    if (builderSel[catId] && builderSel[catId].length === 0) {
+      delete builderSel[catId];
+    }
+  });
+
+  const posCategories = data.categories.filter(c => !c.negative);
+  const negCategories = data.categories.filter(c => c.negative);
+  const posParts = posCategories.flatMap(c => builderSel[c.id] || []);
+  const customPos = document.getElementById('custom-pos').value.trim();
+  if (customPos) posParts.push(customPos);
+  const negParts = negCategories.flatMap(c => builderSel[c.id] || []);
+  const customNeg = document.getElementById('custom-neg').value.trim();
+  if (customNeg) negParts.push(customNeg);
+
+  const posPrompt = posParts.join(', ');
+  const negPrompt = negParts.join(', ');
+  const oa = document.getElementById('output-area');
+
+  if (!posPrompt && !negPrompt) {
+    oa.innerHTML = '<div class="output-empty">⬆️ 上の項目を選ぶとここにプロンプトが表示されます</div>';
+    return;
+  }
+  oa.innerHTML = '';
+  if (posPrompt) oa.appendChild(makeOutputBlock('✅ ポジティブプロンプト', posPrompt, 'pos', '#34d399'));
+  if (negPrompt) oa.appendChild(makeOutputBlock('🚫 ネガティブプロンプト', negPrompt, 'neg', '#f87171'));
+
+  // ヘッダー選択カウント更新
+  const selCatCount = Object.values(builderSel).filter(v => v.length > 0).length;
+  const selTagCount = Object.values(builderSel).flat().length;
+  const statsEl = document.getElementById('header-stats');
+  if (selTagCount > 0) {
+    document.getElementById('stat-cats').textContent = `${selCatCount} カテゴリ`;
+    document.getElementById('stat-tags').textContent = `${selTagCount} タグ選択中`;
+    statsEl.style.display = 'inline-flex';
+  } else {
+    statsEl.style.display = 'none';
+  }
+}
+
+function makeOutputBlock(label, text, cls, color) {
+  const b = document.createElement('div'); b.className = 'output-block';
+  b.style.borderColor = color + '30';
+  b.innerHTML = `
+    <div class="output-header" style="background:${color}0f">
+      <span class="output-label" style="color:${color}">${label}</span>
+      <button class="copy-btn ${cls}">📋 コピー</button>
+    </div>
+    <div class="output-text">${escH(text)}</div>
+  `;
+  const btn = b.querySelector('.copy-btn');
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.classList.add('done'); btn.textContent = '✓ コピー済み！';
+      // GA イベント計測
+      gtag('event', 'prompt_copied', { event_category: 'engagement', event_label: cls });
+      const tid = setTimeout(() => {
+        if (btn.isConnected) { btn.classList.remove('done'); btn.textContent = '📋 コピー'; }
+        clearTimeout(tid);
+      }, 2000);
+    });
+  });
+  return b;
+}
+
+document.getElementById('custom-pos').addEventListener('input', renderOutput);
+document.getElementById('custom-neg').addEventListener('input', renderOutput);
+
+// ─────────────────────────────────────────────────────
+// CATEGORY EDITOR
+// ─────────────────────────────────────────────────────
+function renderEditorList() {
+  const list = document.getElementById('editor-cat-list');
+  list.innerHTML = '<div class="cat-list-title">カテゴリ一覧 <span style="font-weight:400;opacity:.6">（上下にドラッグで並び替え）</span></div>';
+  data.categories.forEach((cat, idx) => {
+    const item = document.createElement('div');
+    item.className = 'cat-list-item' + (editingCatId === cat.id ? ' active' : '');
+    item.draggable = true;
+    item.dataset.idx = idx;
+    item.innerHTML = `
+      <span class="drag-handle" title="ドラッグで並び替え">⠿</span>
+      <span class="dot" style="background:${cat.color}"></span>
+      <span style="flex:1">${cat.label}</span>
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('drag-handle')) return;
+      editingCatId = cat.id; renderEditorList(); renderEditPanel();
+    });
+    // drag events
+    item.addEventListener('dragstart', e => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', idx);
+      setTimeout(() => item.classList.add('dragging'), 0);
+    });
+    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+    item.addEventListener('dragover', e => {
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.cat-list-item').forEach(el => el.classList.remove('drag-over'));
+      item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      item.classList.remove('drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = parseInt(item.dataset.idx);
+      if (fromIdx === toIdx) return;
+      const moved = data.categories.splice(fromIdx, 1)[0];
+      data.categories.splice(toIdx, 0, moved);
+      save(); renderEditorList(); renderBuilder();
+    });
+    list.appendChild(item);
+  });
+  if (editingCatId) renderEditPanel();
+}
+
+function renderEditPanel() {
+  const cat = data.categories.find(c => c.id === editingCatId);
+  if (!cat) return;
+  const panel = document.getElementById('edit-panel');
+  panel.innerHTML = `
+    <h3>カテゴリを編集</h3>
+    <div class="field-row">
+      <div class="field-label">ラベル（絵文字＋名前）</div>
+      <input class="field-input" id="ed-label" value="${escH(cat.label)}">
+    </div>
+    <div class="field-row">
+      <div class="field-label">カラー</div>
+      <div class="color-swatches">
+        ${COLORS.map(c=>`<div class="swatch ${cat.color===c?'selected':''}" style="background:${c}" data-color="${c}" onclick="setCatColor('${c}')"></div>`).join('')}
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">選択タイプ</div>
+      <div class="toggle-row">
+        <button class="toggle-opt ${!cat.single?'on':''}" onclick="setCatSingle(false)">複数選択</button>
+        <button class="toggle-opt ${cat.single?'on':''}" onclick="setCatSingle(true)">単一選択</button>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-label">プロンプト種別</div>
+      <div class="toggle-row">
+        <button class="toggle-opt ${!cat.negative?'on':''}" onclick="setCatNeg(false)">ポジティブ</button>
+        <button class="toggle-opt ${cat.negative?'on':''}" onclick="setCatNeg(true)">ネガティブ</button>
+      </div>
+    </div>
+    <hr class="section-sep">
+    <div class="field-label" style="margin-bottom:10px">選択肢 <span style="font-weight:400;opacity:.6;text-transform:none;letter-spacing:0">（ドラッグで並び替え可）</span></div>
+    <div style="display:grid;grid-template-columns:18px 1fr 1fr 28px;gap:4px 6px;margin-bottom:6px;padding:0 2px">
+      <span></span>
+      <span style="font-size:10px;color:var(--muted)">日本語ラベル</span>
+      <span style="font-size:10px;color:var(--muted)">英語プロンプト（SDに渡す）</span>
+      <span></span>
+    </div>
+    <div class="options-list" id="options-list">
+      ${cat.options.map((o,i)=>{
+        const isDefault = i < getDefaultOptCount(cat.id);
+        return `
+        <div class="option-row" draggable="true" data-oi="${i}">
+          <span class="opt-drag-handle" title="ドラッグで並び替え">⠿</span>
+          <input value="${escH(o.ja)}" oninput="setOptJa(${i},this.value)" placeholder="日本語" ${isDefault?'readonly style="opacity:.6"':''}>
+          <input value="${escH(o.en)}" oninput="setOptEn(${i},this.value)" placeholder="英語プロンプト" style="font-family:'JetBrains Mono',monospace;font-size:11px${isDefault?';opacity:.6':''}" ${isDefault?'readonly':''}>
+          ${isDefault ? '<span style="font-size:10px;color:var(--muted);text-align:center;width:28px" title="デフォルトタグは削除できません">🔒</span>' : `<button class="del-btn" onclick="delOpt(${i})">×</button>`}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="action-row">
+      <button class="action-btn btn-teal" onclick="addOpt()">＋ 選択肢追加</button>
+      ${isDefaultCat(cat.id)
+        ? '<button class="action-btn" style="opacity:.4;cursor:not-allowed" title="デフォルトカテゴリは削除できません">🔒 カテゴリ削除</button>'
+        : '<button class="action-btn btn-red" onclick="deleteCat()">🗑 カテゴリ削除</button>'
+      }
+      <button class="btn-save" onclick="saveEdits()">✓ 保存して反映</button>
+    </div>
+    <p class="info-tip" style="margin-top:10px">保存するとビルダーに即反映されます</p>
+  `;
+  bindOptDrag();
+}
+
+function setCatColor(c) {
+  const cat = data.categories.find(x=>x.id===editingCatId);
+  cat.color = c; renderEditPanel();
+}
+function setCatSingle(v) {
+  const cat = data.categories.find(x=>x.id===editingCatId);
+  cat.single = v; renderEditPanel();
+}
+function setCatNeg(v) {
+  const cat = data.categories.find(x=>x.id===editingCatId);
+  cat.negative = v; renderEditPanel();
+}
+function setOptJa(i,v) { data.categories.find(c=>c.id===editingCatId).options[i].ja = v; }
+function setOptEn(i,v) {
+  const cat = data.categories.find(c=>c.id===editingCatId);
+  const oldEn = cat.options[i].en;
+  cat.options[i].en = v;
+  // builderSelに古いen文字列が残っていたら除去（編集中は選択状態を維持しない）
+  if (builderSel[cat.id] && oldEn && oldEn.trim() !== '') {
+    builderSel[cat.id] = builderSel[cat.id].filter(x => x !== oldEn);
+  }
+}
+function addOpt() {
+  if (isFreeLimitReached()) {
+    showToast('⚠️ 無料版のタグ上限（20個）に達しました。フル版にアップグレードしてください。');
+    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_tag' });
+    return;
+  }
+  data.categories.find(c=>c.id===editingCatId).options.push({ja:'',en:''});
+  updateFreeLimitUI();
+  renderEditPanel();
+}
+function delOpt(i) {
+  const cat = data.categories.find(c=>c.id===editingCatId);
+  const removedEn = cat.options[i].en;
+  cat.options.splice(i, 1);
+  // builderSelから削除されたenを除去
+  if (builderSel[cat.id] && removedEn) {
+    builderSel[cat.id] = builderSel[cat.id].filter(x => x !== removedEn);
+  }
+  updateFreeLimitUI();
+  renderEditPanel();
+}
+// デフォルトカテゴリIDを初回起動時に記録
+function isDefaultCat(catId) {
+  // カスタム追加カテゴリのIDは 'cat_' + タイムスタンプ形式
+  return !catId.startsWith('cat_');
+}
+
+function deleteCat() {
+  if (isDefaultCat(editingCatId)) {
+    showToast('⚠️ デフォルトカテゴリは削除できません');
+    return;
+  }
+  if (!confirm('このカテゴリを削除しますか？')) return;
+  data.categories = data.categories.filter(c=>c.id!==editingCatId);
+  editingCatId = null; save(); renderEditorList();
+  document.getElementById('edit-panel').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:30px 0;text-align:center">← 左のカテゴリを選択してください</div>';
+  renderBuilder();
+  updateFreeLimitUI();
+}
+function bindOptDrag() {
+  const rows = document.querySelectorAll('#options-list .option-row');
+  rows.forEach(row => {
+    row.addEventListener('dragstart', e => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', row.dataset.oi);
+      setTimeout(() => row.classList.add('dragging'), 0);
+    });
+    row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      document.querySelectorAll('#options-list .option-row').forEach(r => r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      const toIdx = parseInt(row.dataset.oi);
+      if (fromIdx === toIdx) return;
+      const cat = data.categories.find(c => c.id === editingCatId);
+      const moved = cat.options.splice(fromIdx, 1)[0];
+      cat.options.splice(toIdx, 0, moved);
+      renderEditPanel();
+    });
+  });
+}
+
+function saveEdits() {
+  const cat = data.categories.find(c=>c.id===editingCatId);
+  const wasSingle = cat.single;
+  cat.label = document.getElementById('ed-label').value;
+  // singleに変わった場合、複数選択されていたものを1つに絞る
+  if (cat.single && !wasSingle && builderSel[cat.id] && builderSel[cat.id].length > 1) {
+    builderSel[cat.id] = [builderSel[cat.id][0]];
+  }
+  // negative変更時、ポジ↔ネガの分類が変わるのでbuilderSelをクリア
+  const wasNegative = cat.negative;
+  const newNegative = document.getElementById('ed-negative') ? document.getElementById('ed-negative').checked : wasNegative;
+  if (wasNegative !== newNegative) {
+    builderSel[cat.id] = [];
+  }
+  save(); renderEditorList(); renderBuilder();
+  updateFreeLimitUI();
+  showToast('保存しました ✓');
+}
+function addCategory() {
+  if (isFreeLimitReached()) {
+    showToast('⚠️ 無料版のタグ上限（20個）に達しました。フル版にアップグレードしてください。');
+    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_category' });
+    return;
+  }
+  const id = 'cat_' + Date.now();
+  data.categories.push({ id, label:'🆕 新しいカテゴリ', color:'#60a5fa', single:false, negative:false, options:[] });
+  editingCatId = id; save(); renderEditorList(); renderBuilder();
+  updateFreeLimitUI();
+}
+
+// ─────────────────────────────────────────────────────
+// PRESET EDITOR
+// ─────────────────────────────────────────────────────
+function renderPresetEditor() {
+  const list = document.getElementById('preset-editor-list');
+  list.innerHTML = '';
+  data.presets.forEach((p, pi) => {
+    const div = document.createElement('div'); div.className = 'preset-editor-item';
+    const selCount = Object.values(p.selections).flat().length;
+    div.innerHTML = `
+      <div class="row">
+        <input value="${escH(p.label)}" oninput="data.presets[${pi}].label=this.value" placeholder="プリセット名">
+        <span class="snapshot-lbl">選択: ${selCount}個</span>
+        <button class="del-btn" onclick="deletePreset(${pi})">×</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="action-btn btn-indigo" onclick="snapshotPreset(${pi})">📸 今の選択をスナップショット</button>
+        <button class="action-btn btn-teal" onclick="savePresets()">✓ 保存</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+const FREE_PRESET_LIMIT = 3;
+
+function updatePresetLimitUI() {
+  const el = document.getElementById('preset-limit-count');
+  if (el) el.textContent = Math.max(0, FREE_PRESET_LIMIT - data.presets.length);
+}
+
+function addPreset() {
+  if (data.presets.length >= FREE_PRESET_LIMIT) {
+    showToast('⚠️ 無料版はプリセット3個まで。フル版にアップグレードしてください。');
+    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_preset' });
+    return;
+  }
+  data.presets.push({ id:'p'+Date.now(), label:'🆕 新しいプリセット', selections: JSON.parse(JSON.stringify(builderSel)) });
+  save(); renderPresetEditor(); renderBuilder();
+  updatePresetLimitUI();
+  showToast('現在の選択でプリセットを作成しました');
+}
+function deletePreset(i) {
+  if (!confirm('削除しますか？')) return;
+  data.presets.splice(i,1); save(); renderPresetEditor(); renderBuilder();
+}
+function snapshotPreset(i) {
+  data.presets[i].selections = JSON.parse(JSON.stringify(builderSel));
+  save(); renderPresetEditor(); showToast('スナップショットを保存しました ✓');
+}
+function savePresets() { save(); renderBuilder(); showToast('保存しました ✓'); }
+
+// ─────────────────────────────────────────────────────
+// CSV EXPORT / IMPORT
+// ─────────────────────────────────────────────────────
+function exportCSV() {
+  // 形式: category_id, category_label, category_color, single, negative, option_ja, option_en
+  const rows = [['category_id','category_label','category_color','single','negative','option_ja','option_en']];
+  data.categories.forEach(cat => {
+    if (cat.options.length === 0) {
+      rows.push([cat.id, cat.label, cat.color, cat.single?'true':'false', cat.negative?'true':'false', '', '']);
+    } else {
+      cat.options.forEach(opt => {
+        rows.push([cat.id, cat.label, cat.color, cat.single?'true':'false', cat.negative?'true':'false', opt.ja, opt.en]);
+      });
+    }
+  });
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = 'jc_craft_tags_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('CSVを書き出しました ✓');
+}
+
+function importCSV(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result.replace(/^\uFEFF/, ''); // BOM除去
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const header = parseCSVRow(lines[0]);
+      const idxId = header.indexOf('category_id');
+      const idxLabel = header.indexOf('category_label');
+      const idxColor = header.indexOf('category_color');
+      const idxSingle = header.indexOf('single');
+      const idxNeg = header.indexOf('negative');
+      const idxJa = header.indexOf('option_ja');
+      const idxEn = header.indexOf('option_en');
+      if (idxId < 0 || idxLabel < 0) { showToast('⚠️ CSVの形式が正しくありません'); return; }
+
+      const catMap = new Map();
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCSVRow(lines[i]);
+        const cid = cols[idxId] || ''; if (!cid) continue;
+        if (!catMap.has(cid)) {
+          catMap.set(cid, {
+            id: cid,
+            label: cols[idxLabel] || cid,
+            color: cols[idxColor] || '#60a5fa',
+            single: cols[idxSingle] === 'true',
+            negative: cols[idxNeg] === 'true',
+            options: []
+          });
+        }
+        const ja = idxJa >= 0 ? cols[idxJa] : '';
+        const en = idxEn >= 0 ? cols[idxEn] : '';
+        if (ja || en) catMap.get(cid).options.push({ja, en});
+      }
+      if (catMap.size === 0) { showToast('⚠️ 読み込めるデータがありません'); return; }
+      if (!confirm(`CSVから ${catMap.size} カテゴリを読み込みます。\n現在のデータは上書きされます。よろしいですか？`)) { input.value=''; return; }
+      data.categories = [...catMap.values()];
+      builderSel = {};
+      save(); renderBuilder(); renderEditorList();
+      showToast(`✓ ${catMap.size} カテゴリを読み込みました`);
+    } catch(err) {
+      showToast('⚠️ 読み込みエラー: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function parseCSVRow(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === '"' && line[i+1] === '"') { cur += '"'; i++; }
+      else if (ch === '"') { inQ = false; }
+      else { cur += ch; }
+    } else {
+      if (ch === '"') { inQ = true; }
+      else if (ch === ',') { result.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ─────────────────────────────────────────────────────
+// TAG SEARCH
+// ─────────────────────────────────────────────────────
+function filterTags(query) {
+  const q = query.trim().toLowerCase();
+  const cards = document.querySelectorAll('#cats-container .cat-card');
+  let anyVisible = false;
+  cards.forEach(card => {
+    const chips = card.querySelectorAll('.chip');
+    let cardHasVisible = false;
+    chips.forEach(chip => {
+      const match = !q || chip.textContent.toLowerCase().includes(q) || (chip.title && chip.title.toLowerCase().includes(q));
+      chip.classList.toggle('hidden', !match);
+      if (match) cardHasVisible = true;
+    });
+    card.classList.toggle('all-hidden', !cardHasVisible);
+    if (cardHasVisible) anyVisible = true;
+  });
+  // 空結果メッセージ
+  let emptyEl = document.getElementById('search-empty-msg');
+  if (!anyVisible && q) {
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.id = 'search-empty-msg'; emptyEl.className = 'search-empty';
+      document.getElementById('cats-container').after(emptyEl);
+    }
+    emptyEl.textContent = `「${query}」に一致するタグが見つかりません`;
+    emptyEl.style.display = '';
+  } else if (emptyEl) {
+    emptyEl.style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// DARK MODE
+// ─────────────────────────────────────────────────────
+function toggleTheme() {
+  const isDark = document.body.classList.toggle('dark');
+  document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('jc_craft_theme', isDark ? 'dark' : 'light');
+}
+function initTheme() {
+  const saved = localStorage.getItem('jc_craft_theme');
+  if (saved === 'dark') {
+    document.body.classList.add('dark');
+    document.getElementById('theme-toggle').textContent = '☀️';
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────
+function escH(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div'); t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fff;color:#0ea5e9;padding:10px 22px;border-radius:999px;font-size:13px;font-weight:700;border:1px solid #0ea5e944;box-shadow:0 4px 16px rgba(14,165,233,0.15);z-index:999;transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.style.opacity = '0', 2000);
+}
+
+// ─────────────────────────────────────────────────────
+// ONBOARDING
+// ─────────────────────────────────────────────────────
+function initOnboarding() {
+  if (!localStorage.getItem('jc_craft_welcomed')) {
+    document.getElementById('onboarding-modal').style.display = 'flex';
+  }
+}
+function closeOnboarding() {
+  localStorage.setItem('jc_craft_welcomed', '1');
+  const modal = document.getElementById('onboarding-modal');
+  modal.style.opacity = '0';
+  modal.style.transition = 'opacity .25s';
+  setTimeout(() => modal.style.display = 'none', 250);
+}
+
+// ─────────────────────────────────────────────────────
+// JSON BACKUP / RESTORE
+// ─────────────────────────────────────────────────────
+function exportJSON() {
+  const payload = JSON.stringify(data, null, 2);
+  const blob = new Blob([payload], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url;
+  a.download = 'jc_craft_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📦 JSONバックアップを保存しました ✓');
+}
+function importJSON(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!parsed.categories || !parsed.presets) { showToast('⚠️ 正しいバックアップファイルではありません'); return; }
+      if (!confirm(`バックアップから復元します。\nカテゴリ: ${parsed.categories.length}件 / プリセット: ${parsed.presets.length}件\n現在のデータは上書きされます。よろしいですか？`)) { input.value=''; return; }
+      data = parsed;
+      builderSel = {};
+      save(); renderBuilder(); renderEditorList();
+      showToast(`✓ 復元完了 — カテゴリ ${data.categories.length}件・プリセット ${data.presets.length}件`);
+    } catch(err) {
+      showToast('⚠️ 読み込みエラー: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ─────────────────────────────────────────────────────
+// KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  // 入力中は無視
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  // Ctrl/Cmd + P → ポジティブプロンプトをコピー
+  if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+    e.preventDefault();
+    const posBtn = document.querySelector('.copy-btn.pos');
+    if (posBtn) { posBtn.click(); showToast('⌨️ Ctrl+P — ポジティブをコピーしました'); }
+  }
+  // Ctrl/Cmd + Shift + P → ネガティブプロンプトをコピー
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+    e.preventDefault();
+    const negBtn = document.querySelector('.copy-btn.neg');
+    if (negBtn) { negBtn.click(); showToast('⌨️ Ctrl+Shift+P — ネガティブをコピーしました'); }
+  }
+  // Ctrl/Cmd + R → 選択リセット
+  if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+    e.preventDefault();
+    builderSel = {}; renderBuilder();
+    showToast('⌨️ Ctrl+R — 選択をリセットしました');
+  }
+  // / → 検索バーにフォーカス
+  if (e.key === '/' && document.getElementById('view-builder').classList.contains('active')) {
+    e.preventDefault();
+    const sb = document.getElementById('tag-search');
+    sb.focus(); sb.select();
+  }
+});
+
+// ─────────────────────────────────────────────────────
+// FREE VERSION LIMIT
+// ─────────────────────────────────────────────────────
+const FREE_TAG_LIMIT = 20;
+
+// デフォルトの初期タグ数を記録（初回起動時に確定）
+// デフォルトの各カテゴリのタグ数を初回起動時に記録
+function getDefaultOptCount(catId) {
+  const key = 'jc_free_default_opts_' + catId;
+  const saved = localStorage.getItem(key);
+  if (saved !== null) return parseInt(saved);
+  const cat = data.categories.find(c => c.id === catId);
+  const count = cat ? cat.options.length : 0;
+  localStorage.setItem(key, count);
+  return count;
+}
+
+function getDefaultTagCount() {
+  const saved = localStorage.getItem('jc_free_default_count');
+  if (saved) return parseInt(saved);
+  // 初回：現在のタグ数をデフォルトとして記録
+  const count = data.categories.reduce((sum, c) => sum + c.options.length, 0);
+  localStorage.setItem('jc_free_default_count', count);
+  return count;
+}
+
+function countCustomTags() {
+  const total = data.categories.reduce((sum, c) => sum + c.options.length, 0);
+  const defaultCount = getDefaultTagCount();
+  return Math.max(0, total - defaultCount);
+}
+
+function updateFreeLimitUI() {
+  const customCount = countCustomTags();
+  const remaining = Math.max(0, FREE_TAG_LIMIT - customCount);
+  const pct = Math.min(100, (customCount / FREE_TAG_LIMIT) * 100);
+
+  const countEl = document.getElementById('free-limit-count');
+  const fillEl = document.getElementById('free-limit-fill');
+  if (countEl) countEl.textContent = remaining;
+  if (fillEl) {
+    fillEl.style.width = pct + '%';
+    fillEl.className = 'free-limit-fill' + (pct >= 100 ? ' full' : pct >= 70 ? ' warning' : '');
+  }
+}
+
+function isFreeLimitReached() {
+  return countCustomTags() >= FREE_TAG_LIMIT;
+}
+
+// ─────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────
+renderBuilder();
+initOnboarding();
+initTheme();
+updateFreeLimitUI();
+updatePresetLimitUI();
+</script>
+</body>
+</html>
