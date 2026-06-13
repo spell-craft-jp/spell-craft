@@ -611,6 +611,13 @@
     box-shadow: 0 2px 8px rgba(99,102,241,0.25);
   }
   .btn-upgrade:hover { opacity: .9; }
+  .btn-reset-default {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--border); color: var(--muted);
+    background: var(--white); cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .btn-reset-default:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,.05); }
   .tag-limit-warning {
     display: none; padding: 12px 16px; border-radius: 10px;
     background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
@@ -764,6 +771,7 @@
       <span class="locked-badge">🔒 有料版のみ</span>
       <a href="https://spell-craft.booth.pm/items/8485120" target="_blank" class="btn-upgrade" style="font-size:11px;padding:4px 12px">フル版で使う</a>
     </div>
+    <button class="btn-reset-default" onclick="resetToDefault()">🔄 タグをデフォルトに戻す</button>
   </div>
   <div class="editor-grid" style="margin-top:14px">
     <div>
@@ -987,8 +995,8 @@
 // ─────────────────────────────────────────────────────
 const COLORS = ["#5eead4","#818cf8","#f472b6","#fb923c","#facc15","#34d399","#60a5fa","#c084fc","#f87171","#a3e635"];
 
-let data = {
-  categories: [
+// デフォルトカテゴリ（リセット用）
+const defaultCategories = [
     { id:"quality", label:"✨ クオリティ", color:"#34d399", single:false, negative:false, options:[{ja:"高品質",en:"masterpiece, best quality"},{ja:"超高解像度",en:"ultra-detailed, 8k uhd"},{ja:"4K",en:"4k, 4k resolution"},{ja:"美しい照明",en:"beautiful lighting, cinematic lighting"},{ja:"鮮明な輪郭",en:"sharp focus, crisp lines"},{ja:"映画的",en:"cinematic, film grain"},{ja:"プロ撮影",en:"professional photography, DSLR"},{ja:"賞受賞レベル",en:"award winning art, trending on artstation"},{ja:"被写界深度",en:"depth of field, bokeh background"}] },
     { id:"subject", label:"🎨 被写体", color:"#f472b6", single:false, negative:false, options:[{ja:"女性",en:"1girl"},{ja:"男性",en:"1boy"},{ja:"少女",en:"1girl, young"},{ja:"複数の女性",en:"2girls"},{ja:"カップル",en:"1boy, 1girl, couple"},{ja:"猫",en:"cat"},{ja:"犬",en:"dog"},{ja:"ドラゴン",en:"dragon"},{ja:"風景（人なし）",en:"scenery, no humans"},{ja:"建物・都市",en:"architecture, cityscape"},{ja:"花・植物",en:"flowers, plants, botanical"},{ja:"食べ物",en:"food, still life"},{ja:"乗り物",en:"vehicle"},{ja:"宇宙・惑星",en:"space, planets, cosmos"}] },
     { id:"style", label:"🖌️ スタイル", color:"#818cf8", single:true, negative:false, options:[{ja:"アニメ風",en:"anime style, anime screencap"},{ja:"リアル・写真",en:"photorealistic, hyperrealistic, 8k"},{ja:"水彩画",en:"watercolor painting, soft edges"},{ja:"油絵",en:"oil painting, impasto"},{ja:"マンガ風",en:"manga style, black and white lineart"},{ja:"ピクセルアート",en:"pixel art, 16bit"},{ja:"3DCG",en:"3d render, octane render, blender"},{ja:"スケッチ",en:"pencil sketch, hand drawn"},{ja:"サイバーパンク",en:"cyberpunk, neon lights, futuristic"},{ja:"ファンタジー",en:"fantasy art, magical, ethereal"},{ja:"ローポリ",en:"low poly, geometric, flat shading"},{ja:"水墨画",en:"ink wash painting, sumi-e, traditional"},{ja:"ステンドグラス",en:"stained glass, colorful mosaic"},{ja:"切り絵",en:"paper cut art, silhouette"}] },
@@ -1007,7 +1015,10 @@ let data = {
     { id:"pose", label:"🤸 ポーズ", color:"#f97316", single:false, negative:false, options:[{ja:"立ち",en:"standing"},{ja:"座り",en:"sitting"},{ja:"寝そべり",en:"lying down"},{ja:"うつ伏せ",en:"lying on stomach, prone position"},{ja:"仰向け",en:"lying on back"},{ja:"しゃがみ",en:"crouching, squatting"},{ja:"ひざまずき",en:"kneeling"},{ja:"ジャンプ",en:"jumping, leaping"},{ja:"走り",en:"running"},{ja:"振り返り",en:"looking back, turning around"},{ja:"壁もたれ",en:"leaning against wall"},{ja:"腕を組む",en:"arms crossed"},{ja:"腕を広げる",en:"arms outstretched"},{ja:"手を腰に",en:"hands on hips"},{ja:"頬に手を当てる",en:"hand on cheek"},{ja:"あごに手を当てる",en:"hand on chin, thinking pose"},{ja:"お辞儀",en:"bowing"},{ja:"ダイナミックポーズ",en:"dynamic pose, action pose"},{ja:"バランスポーズ",en:"balancing pose"},{ja:"背伸び",en:"stretching, arms raised"}] },
     { id:"action", label:"⚡ 行動", color:"#4ade80", single:false, negative:false, options:[{ja:"本を読む",en:"reading book"},{ja:"音楽を聴く",en:"listening to music, headphones"},{ja:"スマホを見る",en:"looking at phone, smartphone"},{ja:"食べる",en:"eating food"},{ja:"飲む",en:"drinking, holding cup"},{ja:"歌う",en:"singing, microphone"},{ja:"踊る",en:"dancing"},{ja:"戦う",en:"fighting, battle, action"},{ja:"魔法を使う",en:"casting magic, spell, glowing hands"},{ja:"手を振る",en:"waving hand, greeting"},{ja:"指差し",en:"pointing finger"},{ja:"抱きしめる",en:"hugging, embracing"},{ja:"花を持つ",en:"holding flowers, bouquet"},{ja:"傘を差す",en:"holding umbrella"},{ja:"楽器を弾く",en:"playing instrument"},{ja:"絵を描く",en:"drawing, painting, art"},{ja:"料理する",en:"cooking, kitchen"},{ja:"走る",en:"running, sprinting"},{ja:"泳ぐ",en:"swimming"},{ja:"眠る",en:"sleeping, asleep"}] },
     { id:"negative", label:"🚫 ネガティブ", color:"#f87171", single:false, negative:true, options:[{ja:"ぼやけ・低画質",en:"blurry, low quality, bad anatomy, worst quality"},{ja:"変な手・指",en:"bad hands, extra fingers, deformed hands, missing fingers"},{ja:"余分な手足",en:"extra limbs, mutated, deformed body"},{ja:"文字・透かし",en:"text, watermark, signature, username"},{ja:"変な顔",en:"bad face, ugly, deformed face, cross-eyed"},{ja:"モノクロ",en:"grayscale, monochrome"},{ja:"フレームアウト",en:"cropped, out of frame, cut off"},{ja:"AI特有のアーティファクト",en:"jpeg artifacts, noise, grain, pixelated"}] }
-  ],
+];
+
+let data = {
+  categories: JSON.parse(JSON.stringify(defaultCategories)),
   presets: [
     { id:"p1", label:"🌸 黄金時間の制服少女", selections:{ quality:["masterpiece, best quality","ultra-detailed, 8k uhd","beautiful lighting, cinematic lighting"], subject:["1girl"], style:["anime style, anime screencap"], hair_style:["long hair","silky hair, smooth hair"], hair_color:["brown hair"], eyes:["blue eyes","large eyes, big eyes"], expression:["shy smile, embarrassed smile"], gaze:["looking at viewer"], outfit:["blazer, school uniform"], pose:["leaning against wall"], composition:["upper body, bust shot"], mood:["golden hour, sunset, warm colors"], location:["rooftop, school roof"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } },
     { id:"p2", label:"🌙 夜桜の和風美少女", selections:{ quality:["masterpiece, best quality","cinematic, film grain","depth of field, bokeh background"], subject:["1girl"], style:["anime style, anime screencap"], hair_style:["long hair","glossy hair, shiny hair"], hair_color:["black hair"], eyes:["purple eyes","watery eyes, glistening eyes"], expression:["serious expression, determined"], gaze:["looking away, into the distance"], outfit:["kimono, japanese clothes"], accessory:["flower hair ornament, floral"], composition:["full body shot"], mood:["night, dark atmosphere, moonlight"], background:["petals falling, flower petals"], location:["japanese shrine, torii gate"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } }
@@ -1653,6 +1664,37 @@ function showToast(msg) {
   t._to = setTimeout(() => t.style.opacity = '0', 2000);
 }
 
+function resetToDefault() {
+  if (!confirm('タグをデフォルトに戻しますか？\n追加したカテゴリ・タグは削除されます。\nプリセットはそのまま残ります。')) return;
+
+  // デフォルトのカテゴリ・タグに戻す
+  const defaultData = getDefaultData();
+  data.categories = defaultData.categories;
+
+  // builderSelもクリア
+  builderSel = {};
+
+  // localStorageのデフォルト数記録もリセット
+  localStorage.removeItem('jc_free_default_count');
+  data.categories.forEach(cat => {
+    localStorage.removeItem('jc_free_default_opts_' + cat.id);
+  });
+
+  save();
+  initFreeDefaults();
+  renderBuilder();
+  renderEditorList();
+  updateFreeLimitUI();
+  showToast('✓ タグをデフォルトに戻しました');
+}
+
+function getDefaultData() {
+  // ハードコードされたデフォルトカテゴリを返す
+  return {
+    categories: defaultCategories
+  };
+}
+
 // ─────────────────────────────────────────────────────
 // ONBOARDING
 // ─────────────────────────────────────────────────────
@@ -1770,6 +1812,13 @@ function countCustomTags() {
   const total = data.categories.reduce((sum, c) => sum + c.options.length, 0);
   const defaultCount = getDefaultTagCount();
   return Math.max(0, total - defaultCount);
+}
+
+function getDefaultTagCount() {
+  const saved = localStorage.getItem('jc_free_default_count');
+  if (saved) return parseInt(saved);
+  // 未記録の場合はdefaultCategoriesのタグ数を返す
+  return defaultCategories.reduce((sum, c) => sum + c.options.length, 0);
 }
 
 function updateFreeLimitUI() {
