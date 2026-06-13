@@ -1740,7 +1740,6 @@ document.addEventListener('keydown', e => {
 const FREE_TAG_LIMIT = 20;
 
 // デフォルトの初期タグ数を記録（初回起動時に確定）
-// デフォルトの各カテゴリのタグ数を初回起動時に記録
 function getDefaultOptCount(catId) {
   const key = 'jc_free_default_opts_' + catId;
   const saved = localStorage.getItem(key);
@@ -1751,13 +1750,20 @@ function getDefaultOptCount(catId) {
   return count;
 }
 
-function getDefaultTagCount() {
-  const saved = localStorage.getItem('jc_free_default_count');
-  if (saved) return parseInt(saved);
-  // 初回：現在のタグ数をデフォルトとして記録
-  const count = data.categories.reduce((sum, c) => sum + c.options.length, 0);
-  localStorage.setItem('jc_free_default_count', count);
-  return count;
+function initFreeDefaults() {
+  // localStorageにデフォルト数が未記録の場合のみ初期化
+  // （初回起動時・または古いキャッシュをクリアした場合）
+  if (!localStorage.getItem('jc_free_default_count')) {
+    const count = data.categories.reduce((sum, c) => sum + c.options.length, 0);
+    localStorage.setItem('jc_free_default_count', count);
+  }
+  // カテゴリごとのデフォルトオプション数も初期化
+  data.categories.forEach(cat => {
+    const key = 'jc_free_default_opts_' + cat.id;
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, cat.options.length);
+    }
+  });
 }
 
 function countCustomTags() {
@@ -1790,6 +1796,7 @@ function isFreeLimitReached() {
 renderBuilder();
 initOnboarding();
 initTheme();
+initFreeDefaults();
 updateFreeLimitUI();
 updatePresetLimitUI();
 </script>
