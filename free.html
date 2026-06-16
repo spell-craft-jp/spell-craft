@@ -131,6 +131,10 @@
     box-shadow: 0 1px 3px rgba(100,120,200,0.08);
   }
   .chip:hover { background: rgba(99,102,241,.08); color: var(--text); border-color: rgba(99,102,241,.3); }
+  .chip.selected-em { color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.18); outline: 2px solid rgba(255,255,255,0.6); outline-offset: -2px; }
+  .chip.selected-em::after { content: ' ★'; font-size: 10px; }
+  .chip.selected-strong { color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.25); outline: 2px solid #fff; outline-offset: -2px; }
+  .chip.selected-strong::after { content: ' ★★'; font-size: 10px; }
   .chip.selected { color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
 
   /* ── custom input ── */
@@ -714,6 +718,58 @@
     /* プリセット制限表示 */
     .preset-limit-info { font-size: 10px; }
   }
+  /* ── EMPHASIS MODE BAR ── */
+  .mode-bar {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+    display: flex; align-items: stretch; gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  .mode-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; padding: 8px 16px;
+    border: none; background: transparent; cursor: pointer;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    transition: background .15s;
+    border-right: 1px solid var(--border);
+  }
+  .mode-btn:last-child { border-right: none; }
+  .mode-btn:hover { background: var(--surface2); }
+  .mode-btn.active { background: var(--accent2); }
+  .mode-btn.active .mode-label { color: #fff; }
+  .mode-btn.active .mode-key { color: rgba(255,255,255,.5); }
+  .mode-label {
+    font-size: 12px; font-weight: 700; color: var(--text);
+    white-space: nowrap;
+  }
+  .mode-key {
+    font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+    letter-spacing: .5px;
+  }
+  /* ── CUSTOM TOOLTIP ── */
+  .chip-tooltip {
+    position: fixed; z-index: 9999;
+    background: var(--ink, #1e2a4a);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; line-height: 1.5;
+    padding: 6px 10px; border-radius: 8px;
+    max-width: 280px; word-break: break-all;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    pointer-events: none;
+    opacity: 0; transition: opacity .15s;
+  }
+  .chip-tooltip.visible { opacity: 1; }
+  .chip-tooltip::before {
+    content: 'EN:';
+    display: block; font-size: 9px; font-weight: 700;
+    color: rgba(255,255,255,.45); letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
 </style>
 </head>
 <body>
@@ -804,6 +860,20 @@
 </div>
 
 <!-- ダークモード切り替え -->
+<div class="mode-bar" id="mode-bar">
+  <button class="mode-btn active" id="mode-normal" onclick="setEmphasisMode(1.0)">
+    <span class="mode-label">通常</span>
+    <span class="mode-key">click</span>
+  </button>
+  <button class="mode-btn" id="mode-em" onclick="setEmphasisMode(1.2)">
+    <span class="mode-label">★ 強調</span>
+    <span class="mode-key">shift</span>
+  </button>
+  <button class="mode-btn" id="mode-strong" onclick="setEmphasisMode(1.4)">
+    <span class="mode-label">★★ 強強調</span>
+    <span class="mode-key">ctrl</span>
+  </button>
+</div>
 <button class="refresh-btn" onclick="refreshBuilder()" title="プロンプト表示をリフレッシュ">🔄</button>
 <div class="locked-feature" style="position:fixed;bottom:24px;right:20px;z-index:100;" title="有料版のみ">
   <button class="theme-toggle" style="cursor:not-allowed">🔒</button>
@@ -1223,7 +1293,17 @@ function renderBuilder() {
   renderOutput();
 }
 
-function toggleChip(catId, en, single) {
+let emphasisMode = 1.0;
+
+function setEmphasisMode(w) {
+  emphasisMode = w;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  const ids = { 1.0: 'mode-normal', 1.2: 'mode-em', 1.4: 'mode-strong' };
+  const el = document.getElementById(ids[w]);
+  if (el) el.classList.add('active');
+}
+
+function toggleChip(catId, en, single, e) {
   // 空文字のenは選択しない
   if (!en || en.trim() === '') return;
   if (!builderSel[catId]) builderSel[catId] = [];
@@ -1937,6 +2017,7 @@ function isFreeLimitReached() {
 renderBuilder();
 initOnboarding();
 initTheme();
+initTooltip();
 initFreeDefaults();
 updateFreeLimitUI();
 updatePresetLimitUI();
