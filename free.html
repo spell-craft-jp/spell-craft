@@ -637,6 +637,83 @@
     font-size: 13px; color: var(--danger); margin: 12px 0;
     text-align: center;
   }
+
+  /* ── MOBILE OPTIMIZATION ── */
+  @media (max-width: 640px) {
+
+    /* ヘッダー */
+    header { padding: 16px 16px 12px; }
+    header h1 { font-size: 17px; letter-spacing: .5px; }
+    header p { font-size: 10px; }
+    .version-badge { font-size: 9px; padding: 2px 7px; }
+
+    /* 無料版バナー */
+    .free-banner { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
+    .free-banner-text { font-size: 11px; }
+    .free-limit-track { width: 70px; }
+    .btn-upgrade { font-size: 11px; padding: 5px 12px; }
+
+    /* タブ */
+    .tabs { padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 10px 12px; font-size: 11px; }
+
+    /* 検索バー */
+    .search-bar-wrap { padding: 8px 12px; }
+    .search-bar { font-size: 13px; padding: 10px 14px 10px 36px; }
+
+    /* ビュー */
+    .view { padding: 14px 12px 80px; }
+
+    /* プリセットボタン */
+    .preset-btn { font-size: 11px; padding: 6px 12px; }
+
+    /* カテゴリカード */
+    .cat-card { border-radius: 12px; margin-bottom: 10px; }
+    .cat-header { padding: 10px 12px; }
+    .cat-label { font-size: 12px; }
+    .cat-chips { padding: 10px 10px; gap: 6px; }
+
+    /* チップ（タップ領域を広く） */
+    .chip {
+      padding: 8px 14px; font-size: 12px;
+      min-height: 36px; display: inline-flex; align-items: center;
+    }
+
+    /* 出力エリア */
+    .output-block { border-radius: 10px; }
+    .output-header { padding: 8px 12px; }
+    .output-text { font-size: 11px; padding: 10px 12px; }
+    .copy-btn { font-size: 11px; padding: 5px 12px; }
+
+    /* カスタム入力 */
+    .custom-row { flex-direction: column; gap: 8px; }
+    .custom-input { font-size: 13px; }
+
+    /* 右下ボタン群 */
+    .refresh-btn { width: 36px; height: 36px; font-size: 14px; bottom: 16px; right: 12px; }
+    .theme-toggle { width: 36px; height: 36px; font-size: 16px; bottom: 58px; right: 12px; }
+
+    /* カテゴリ編集 */
+    .editor-grid { grid-template-columns: 1fr; }
+    .csv-toolbar { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
+    .backup-bar { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
+    .btn-csv-export, .btn-csv-import, .btn-backup, .btn-restore, .btn-reset-default { font-size: 11px; padding: 5px 10px; }
+
+    /* ヘルプ */
+    .help-grid { grid-template-columns: 1fr; }
+    .shortcut-table td { font-size: 11px; }
+
+    /* オンボーディングモーダル */
+    .modal-box { border-radius: 16px; }
+    .modal-hero { padding: 24px 20px 18px; }
+    .modal-body { padding: 16px 20px 20px; }
+    .modal-feature { padding: 10px 12px; }
+    .btn-start { font-size: 14px; padding: 13px; }
+
+    /* プリセット制限表示 */
+    .preset-limit-info { font-size: 10px; }
+  }
 </style>
 </head>
 <body>
