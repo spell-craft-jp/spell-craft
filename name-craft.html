@@ -169,6 +169,90 @@ input{font-family:inherit;}
   white-space:nowrap;
 }
 .insert-btn:active{ background:#D3DEFB; }
+
+/* ---------- settings card ---------- */
+.settings-card{
+  background:var(--card); border:1px solid var(--line); border-radius:20px;
+  box-shadow:var(--shadow-sm); margin-bottom:16px; overflow:hidden;
+}
+.settings-header{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px; cursor:pointer; user-select:none;
+}
+.settings-title{ flex:1; font-weight:700; font-size:14.5px; color:var(--ink); }
+.settings-chevron{ color:var(--ink-soft); font-size:13px; transition:transform .2s; }
+.settings-card.open .settings-chevron{ transform:rotate(180deg); }
+.settings-body{ padding:0 18px 16px; display:none; }
+.settings-card.open .settings-body{ display:block; }
+.settings-textarea{
+  width:100%; min-height:80px; resize:vertical;
+  border:1.5px solid var(--line); border-radius:12px;
+  background:var(--pill-bg); padding:10px 12px; font-size:14px; line-height:1.7;
+  color:var(--ink); margin-top:10px;
+}
+.settings-textarea:focus{ outline:none; border-color:var(--primary); background:#fff; }
+.settings-sublabel{ font-size:12px; font-weight:700; color:var(--ink-soft); margin-bottom:2px; display:block; }
+
+/* ---------- scene count badge ---------- */
+.scene-count-bar{
+  display:flex; align-items:center; gap:10px;
+  margin-bottom:12px; padding:0 2px;
+}
+.scene-count-badge{
+  background:var(--primary-bg); color:var(--primary-dark);
+  font-size:12.5px; font-weight:700; padding:5px 14px; border-radius:999px;
+}
+.count-bar-spacer{ flex:1; }
+.add-chapter-btn{
+  background:none; border:1.5px dashed var(--line); border-radius:999px;
+  color:var(--ink-soft); font-size:12.5px; font-weight:700; padding:5px 14px;
+}
+.add-chapter-btn:active{ background:var(--primary-bg); border-color:var(--primary); color:var(--primary-dark); }
+
+/* ---------- chapter card ---------- */
+.chapter-card{
+  background:var(--card); border:1px solid var(--line); border-radius:20px;
+  box-shadow:var(--shadow-sm); margin-bottom:16px; overflow:hidden;
+}
+.chapter-header{
+  display:flex; align-items:center; gap:8px;
+  padding:14px 16px; cursor:pointer; user-select:none;
+}
+.chapter-icon{ font-size:16px; flex-shrink:0; }
+.chapter-name-btn{
+  flex:1; background:none; border:none; text-align:left;
+  font-weight:700; font-size:15px; color:var(--ink); padding:0; cursor:pointer;
+}
+.chapter-count{
+  background:var(--pill-bg); color:var(--ink-soft);
+  font-size:12px; font-weight:700; padding:3px 10px; border-radius:999px; flex-shrink:0;
+}
+.chapter-chevron{ color:var(--ink-soft); font-size:13px; flex-shrink:0; transition:transform .2s; }
+.chapter-card.open .chapter-chevron{ transform:rotate(180deg); }
+.chapter-header-actions{ display:flex; gap:4px; flex-shrink:0; }
+.chapter-action-btn{
+  background:none; border:none; color:var(--ink-soft);
+  font-size:12px; font-weight:700; padding:5px 8px; border-radius:8px;
+}
+.chapter-action-btn:active{ background:var(--pill-bg); }
+.chapter-body{ display:none; padding:0 14px 14px; }
+.chapter-card.open .chapter-body{ display:block; }
+.chapter-footer{
+  display:none; padding:0 14px 14px;
+  border-top:0;
+}
+.chapter-card.open .chapter-footer{ display:block; }
+.chapter-add-scene-btn{
+  display:block; width:100%; background:var(--primary-bg); border:none; border-radius:12px;
+  color:var(--primary-dark); font-size:13.5px; font-weight:700; padding:11px;
+}
+.chapter-add-scene-btn:active{ background:#D3DEFB; }
+.chapter-move-scene-btn{
+  background:none; border:none; color:var(--ink-soft);
+  font-size:11px; font-weight:700; padding:4px 7px; border-radius:8px; text-decoration:underline;
+}
+.chapter-move-scene-btn:active{ background:var(--pill-bg); }
+.scene-card{ margin-bottom:14px; }
 .field-label{
   display:flex; align-items:center; gap:6px;
   font-weight:700; font-size:12.5px;
@@ -705,22 +789,99 @@ input{font-family:inherit;}
     return String(max+1);
   }
 
-  function insertRowHTML(afterIndex){
-    return `<div class="insert-row"><button class="insert-btn" data-action="insert-scene" data-after="${afterIndex}">＋ ここに挿入</button></div>`;
+  /* ---- chapter helpers ---- */
+  function chapterScenes(proj, chapterId){
+    return proj.scenes.filter(s=>(s.chapterId||null)===(chapterId||null));
+  }
+
+  function insertRowHTML(chapterId, afterSceneId){
+    return `<div class="insert-row"><button class="insert-btn" data-action="insert-scene" data-chapter="${chapterId||''}" data-after="${afterSceneId||''}">＋ ここに挿入</button></div>`;
+  }
+
+  function settingsCardHTML(proj){
+    const open = proj._settingsOpen;
+    const s = proj.settings||{};
+    return `
+    <div class="settings-card ${open?'open':''}" id="settings-card">
+      <div class="settings-header" data-action="toggle-settings">
+        <span>📖</span><span class="settings-title">作品設定・メモ</span>
+        <span class="settings-chevron">▼</span>
+      </div>
+      <div class="settings-body">
+        <span class="settings-sublabel">あらすじ・世界観</span>
+        <textarea class="settings-textarea" data-field="story" placeholder="物語の概要、世界設定など…">${esc(s.story||'')}</textarea>
+        <span class="settings-sublabel" style="margin-top:10px;display:block;">キャラクター</span>
+        <textarea class="settings-textarea" data-field="chars" placeholder="登場人物、外見、性格など…">${esc(s.chars||'')}</textarea>
+        <span class="settings-sublabel" style="margin-top:10px;display:block;">その他メモ</span>
+        <textarea class="settings-textarea" data-field="notes" placeholder="気になることを何でも…">${esc(s.notes||'')}</textarea>
+      </div>
+    </div>`;
+  }
+
+  function chapterCardHTML(proj, chapter){
+    const scenes = chapterScenes(proj, chapter.id);
+    const open = !chapter.collapsed;
+    let body = '';
+    if(open){
+      if(scenes.length===0){
+        body += `<p style="text-align:center;color:var(--ink-soft);font-size:13px;padding:10px 0 4px;">シーンがまだありません</p>`;
+      } else {
+        body += insertRowHTML(chapter.id, null);
+        scenes.forEach((s, idx)=>{
+          body += sceneCardHTML(s, idx, scenes.length);
+          body += insertRowHTML(chapter.id, s.id);
+        });
+      }
+    }
+    return `
+    <div class="chapter-card ${open?'open':''}" data-chapter-id="${chapter.id}">
+      <div class="chapter-header">
+        <span class="chapter-icon">📂</span>
+        <button class="chapter-name-btn" data-action="rename-chapter">${esc(chapter.name)}</button>
+        <span class="chapter-count">${scenes.length}ページ</span>
+        <div class="chapter-header-actions">
+          <button class="chapter-action-btn" data-action="delete-chapter" title="チャプターを削除">🗑</button>
+        </div>
+        <button class="chapter-chevron" data-action="toggle-chapter" aria-label="開閉">▼</button>
+      </div>
+      <div class="chapter-body">${body}</div>
+      <div class="chapter-footer">
+        <button class="chapter-add-scene-btn" data-action="append-scene-to-chapter">＋ このチャプターの末尾に追加</button>
+      </div>
+    </div>`;
   }
 
   function renderEditor(){
     const proj = state.currentProject;
-    let scenesHTML = '';
-    if(proj.scenes.length === 0){
-      scenesHTML = `<div class="empty-state"><p>シーンがまだありません。<br>「＋ シーンを追加」から最初の1コマを作りましょう。</p></div>`;
-    } else {
-      // insert button before first scene
-      scenesHTML += insertRowHTML(-1);
-      proj.scenes.forEach((s, idx)=>{
-        scenesHTML += sceneCardHTML(s, idx, proj.scenes.length);
-        scenesHTML += insertRowHTML(idx);
-      });
+    if(!proj.chapters) proj.chapters = [];
+    if(!proj.settings) proj.settings = {};
+
+    // Ungrouped scenes (no chapterId or chapterId not in chapters list)
+    const knownChapterIds = new Set(proj.chapters.map(c=>c.id));
+    const ungrouped = proj.scenes.filter(s=>!s.chapterId || !knownChapterIds.has(s.chapterId));
+
+    let chaptersHTML = proj.chapters.map(ch=>chapterCardHTML(proj, ch)).join('');
+
+    if(ungrouped.length > 0){
+      let ub = insertRowHTML(null, null);
+      ungrouped.forEach((s,idx)=>{ ub += sceneCardHTML(s, idx, ungrouped.length); ub += insertRowHTML(null, s.id); });
+      chaptersHTML += `
+      <div class="chapter-card open" data-chapter-id="">
+        <div class="chapter-header">
+          <span class="chapter-icon">📁</span>
+          <span class="chapter-name-btn" style="font-weight:700;font-size:15px;">未分類</span>
+          <span class="chapter-count">${ungrouped.length}ページ</span>
+          <button class="chapter-chevron" data-action="toggle-chapter" aria-label="開閉">▼</button>
+        </div>
+        <div class="chapter-body">${ub}</div>
+        <div class="chapter-footer">
+          <button class="chapter-add-scene-btn" data-action="append-scene-to-chapter">＋ 末尾に追加</button>
+        </div>
+      </div>`;
+    }
+
+    if(proj.chapters.length===0 && ungrouped.length===0){
+      chaptersHTML = `<div class="empty-state"><p>シーンがまだありません。<br>チャプターを追加して、「＋ シーンを追加」から始めましょう。</p></div>`;
     }
 
     app.innerHTML = `
@@ -730,25 +891,146 @@ input{font-family:inherit;}
         <button class="icon-btn" id="open-library-btn">🔊 SFX辞書</button>
       </div>
       <div class="screen" id="scene-list">
-        ${scenesHTML}
+        ${settingsCardHTML(proj)}
+        <div class="scene-count-bar">
+          <span class="scene-count-badge">🖼 全${proj.scenes.length}ページ</span>
+          <span class="count-bar-spacer"></span>
+          <button class="add-chapter-btn" id="add-chapter-btn">＋ チャプター追加</button>
+        </div>
+        ${chaptersHTML}
       </div>
       <div class="bottom-bar">
-        <button class="add-scene-btn" id="add-scene-btn">＋ 末尾にシーンを追加</button>
+        <button class="add-scene-btn" id="add-scene-btn">＋ 未分類に追加</button>
       </div>`;
 
+    // --- wire header ---
     document.getElementById('back-to-list').addEventListener('click', ()=>{ renderProjectList(); });
     document.getElementById('rename-project-btn').addEventListener('click', openRenameProjectModal);
     document.getElementById('open-library-btn').addEventListener('click', ()=> openLibraryModal({mode:'manage'}));
-    document.getElementById('add-scene-btn').addEventListener('click', ()=> insertScene(proj.scenes.length - 1));
+    document.getElementById('add-chapter-btn').addEventListener('click', openAddChapterModal);
+    document.getElementById('add-scene-btn').addEventListener('click', ()=> insertScene(null, null));
 
-    // insert buttons
-    app.querySelectorAll('[data-action="insert-scene"]').forEach(btn=>{
-      btn.addEventListener('click', ()=> insertScene(parseInt(btn.dataset.after, 10)));
+    // --- settings card ---
+    const settingsCard = document.getElementById('settings-card');
+    settingsCard.querySelector('[data-action="toggle-settings"]').addEventListener('click', ()=>{
+      proj._settingsOpen = !proj._settingsOpen;
+      settingsCard.classList.toggle('open', proj._settingsOpen);
+    });
+    settingsCard.querySelectorAll('.settings-textarea').forEach(ta=>{
+      ta.addEventListener('input', ()=>{
+        if(!proj.settings) proj.settings = {};
+        proj.settings[ta.dataset.field] = ta.value;
+        debouncedSave();
+      });
     });
 
-    proj.scenes.forEach(s=>{
-      const card = document.querySelector(`.scene-card[data-scene-id="${s.id}"]`);
-      if(card) attachSceneCardListeners(card, s);
+    // --- chapter cards ---
+    app.querySelectorAll('.chapter-card[data-chapter-id]').forEach(card=>{
+      const chapterId = card.dataset.chapterId || null;
+      const chapter = chapterId ? proj.chapters.find(c=>c.id===chapterId) : null;
+
+      // toggle collapse
+      const chevBtn = card.querySelector('[data-action="toggle-chapter"]');
+      if(chevBtn) chevBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(chapter){ chapter.collapsed = !chapter.collapsed; saveProject(proj); }
+        renderEditor();
+      });
+
+      // rename
+      const renameBtn = card.querySelector('[data-action="rename-chapter"]');
+      if(renameBtn) renameBtn.addEventListener('click', ()=> chapter && openRenameChapterModal(chapter));
+
+      // delete chapter
+      const delBtn = card.querySelector('[data-action="delete-chapter"]');
+      if(delBtn) delBtn.addEventListener('click', ()=> chapter && openDeleteChapterModal(chapter));
+
+      // append scene to chapter (footer button)
+      const appendBtn = card.querySelector('[data-action="append-scene-to-chapter"]');
+      if(appendBtn) appendBtn.addEventListener('click', ()=> insertScene(chapterId, null, true));
+
+      // insert-scene buttons
+      card.querySelectorAll('[data-action="insert-scene"]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const cid = btn.dataset.chapter || null;
+          const afterId = btn.dataset.after || null;
+          insertScene(cid, afterId);
+        });
+      });
+
+      // scene cards
+      const scenes = chapterScenes(proj, chapterId);
+      scenes.forEach(s=>{
+        const sc = card.querySelector(`.scene-card[data-scene-id="${s.id}"]`);
+        if(sc) attachSceneCardListeners(sc, s, chapterId);
+      });
+    });
+  }
+
+  /* ---- chapter CRUD ---- */
+  function openAddChapterModal(){
+    openModal({
+      title:'チャプターを追加',
+      center:true,
+      bodyHTML:`<input class="text-input" id="new-chapter-name" placeholder="例：第1章 出会い" maxlength="40">`,
+      footerHTML:`<button class="modal-primary-btn" id="add-chapter-save" disabled>追加する</button>`,
+      onMount:(ov)=>{
+        const input = ov.querySelector('#new-chapter-name');
+        const btn = ov.querySelector('#add-chapter-save');
+        input.addEventListener('input', ()=>{ btn.disabled = !input.value.trim(); });
+        input.addEventListener('keydown', e=>{ if(e.key==='Enter' && !btn.disabled) btn.click(); });
+        btn.addEventListener('click', async ()=>{
+          const name = input.value.trim(); if(!name) return;
+          const proj = state.currentProject;
+          if(!proj.chapters) proj.chapters = [];
+          proj.chapters.push({ id:uid(), name, collapsed:false });
+          await saveProject(proj);
+          closeModal(); renderEditor();
+        });
+        setTimeout(()=>input.focus(), 250);
+      }
+    });
+  }
+
+  function openRenameChapterModal(chapter){
+    openModal({
+      title:'チャプター名を変更',
+      center:true,
+      bodyHTML:`<input class="text-input" id="rename-chapter-input" value="${esc(chapter.name)}" maxlength="40">`,
+      footerHTML:`<button class="modal-primary-btn" id="rename-chapter-save">保存する</button>`,
+      onMount:(ov)=>{
+        const input = ov.querySelector('#rename-chapter-input');
+        ov.querySelector('#rename-chapter-save').addEventListener('click', async ()=>{
+          const name = input.value.trim(); if(!name) return;
+          chapter.name = name;
+          await saveProject(state.currentProject);
+          closeModal(); renderEditor();
+        });
+        setTimeout(()=>{ input.focus(); input.select(); }, 250);
+      }
+    });
+  }
+
+  function openDeleteChapterModal(chapter){
+    const proj = state.currentProject;
+    const cnt = chapterScenes(proj, chapter.id).length;
+    openModal({
+      title:'チャプターを削除',
+      center:true,
+      bodyHTML:`<p class="confirm-text">「${esc(chapter.name)}」を削除します。${cnt>0?`中の${cnt}ページは「未分類」に移動します。`:''}よろしいですか？</p>`,
+      footerHTML:`
+        <button class="modal-danger-btn" id="del-chapter-yes">削除する</button>
+        <button class="modal-secondary-btn" data-action="close-modal">キャンセル</button>`,
+      onMount:(ov)=>{
+        ov.querySelector('[data-action="close-modal"]').addEventListener('click', closeModal);
+        ov.querySelector('#del-chapter-yes').addEventListener('click', async ()=>{
+          // move scenes to ungrouped
+          proj.scenes.forEach(s=>{ if(s.chapterId===chapter.id) s.chapterId = null; });
+          proj.chapters = proj.chapters.filter(c=>c.id!==chapter.id);
+          await saveProject(proj);
+          closeModal(); renderEditor();
+        });
+      }
     });
   }
 
@@ -762,28 +1044,43 @@ input{font-family:inherit;}
       onMount:(ov)=>{
         const input = ov.querySelector('#rename-input');
         ov.querySelector('#rename-save-btn').addEventListener('click', async ()=>{
-          const name = input.value.trim();
-          if(!name) return;
+          const name = input.value.trim(); if(!name) return;
           proj.name = name;
           await saveProject(proj);
-          closeModal();
-          renderEditor();
+          closeModal(); renderEditor();
         });
         setTimeout(()=>{ input.focus(); input.select(); }, 250);
       }
     });
   }
 
-  function makeNewScene(proj){
-    return { id:uid(), number:nextSceneNumber(proj), situation:'', bubbles:[], onomatopoeia:[], memo:'' };
+  function makeNewScene(proj, chapterId){
+    return { id:uid(), number:nextSceneNumber(proj), situation:'', bubbles:[], onomatopoeia:[], memo:'', chapterId:chapterId||null };
   }
 
-  async function insertScene(afterIndex){
+  // Insert a scene into chapterId after the scene with afterSceneId (null = at top of chapter)
+  // appendToEnd=true: skip "after" logic, just push to end of chapter
+  async function insertScene(chapterId, afterSceneId, appendToEnd){
     const proj = state.currentProject;
-    const scene = makeNewScene(proj);
-    // afterIndex -1 means insert at the very top; otherwise insert after that index
-    const insertAt = afterIndex + 1;
-    proj.scenes.splice(insertAt, 0, scene);
+    const scene = makeNewScene(proj, chapterId);
+
+    if(appendToEnd){
+      // find last scene of this chapter and insert after it
+      const last = [...proj.scenes].reverse().find(s=>(s.chapterId||null)===(chapterId||null));
+      if(last){
+        const idx = proj.scenes.findIndex(s=>s.id===last.id);
+        proj.scenes.splice(idx+1, 0, scene);
+      } else { proj.scenes.push(scene); }
+    } else if(!afterSceneId){
+      // insert at top of chapter (before first scene of chapter)
+      const firstIdx = proj.scenes.findIndex(s=>(s.chapterId||null)===(chapterId||null));
+      if(firstIdx===-1) proj.scenes.push(scene);
+      else proj.scenes.splice(firstIdx, 0, scene);
+    } else {
+      const afterIdx = proj.scenes.findIndex(s=>s.id===afterSceneId);
+      proj.scenes.splice(afterIdx+1, 0, scene);
+    }
+
     await saveProject(proj);
     renderEditor();
     requestAnimationFrame(()=>{
@@ -794,12 +1091,17 @@ input{font-family:inherit;}
 
   async function moveScene(sceneId, direction){
     const proj = state.currentProject;
-    const idx = proj.scenes.findIndex(s=>s.id===sceneId);
-    if(idx < 0) return;
-    const newIdx = idx + direction;
-    if(newIdx < 0 || newIdx >= proj.scenes.length) return;
-    const [removed] = proj.scenes.splice(idx, 1);
-    proj.scenes.splice(newIdx, 0, removed);
+    const scene = proj.scenes.find(s=>s.id===sceneId);
+    if(!scene) return;
+    const chapterId = scene.chapterId||null;
+    const siblings = proj.scenes.filter(s=>(s.chapterId||null)===chapterId);
+    const sibIdx = siblings.findIndex(s=>s.id===sceneId);
+    const newSibIdx = sibIdx + direction;
+    if(newSibIdx<0 || newSibIdx>=siblings.length) return;
+    const targetScene = siblings[newSibIdx];
+    const idxA = proj.scenes.findIndex(s=>s.id===sceneId);
+    const idxB = proj.scenes.findIndex(s=>s.id===targetScene.id);
+    [proj.scenes[idxA], proj.scenes[idxB]] = [proj.scenes[idxB], proj.scenes[idxA]];
     await saveProject(proj);
     renderEditor();
     requestAnimationFrame(()=>{
@@ -808,7 +1110,15 @@ input{font-family:inherit;}
     });
   }
 
-  /* ---------- scene card markup ---------- */
+  async function moveSceneToChapter(sceneId, targetChapterId){
+    const proj = state.currentProject;
+    const scene = proj.scenes.find(s=>s.id===sceneId);
+    if(!scene) return;
+    scene.chapterId = targetChapterId||null;
+    await saveProject(proj);
+    renderEditor();
+  }
+
   function sceneCardHTML(scene, idx, total){
     return `
     <section class="scene-card" data-scene-id="${scene.id}">
@@ -816,6 +1126,7 @@ input{font-family:inherit;}
       <div class="scene-actions">
         <button class="scene-move-btn" data-action="move-up" aria-label="上へ移動" ${idx===0?'disabled':''}>↑</button>
         <button class="scene-move-btn" data-action="move-down" aria-label="下へ移動" ${idx===total-1?'disabled':''}>↓</button>
+        <button class="chapter-move-scene-btn" data-action="move-to-chapter">移動</button>
         <button class="scene-delete" data-action="delete-scene" aria-label="シーンを削除">×</button>
       </div>
 
@@ -836,6 +1147,61 @@ input{font-family:inherit;}
       <textarea class="memo-input" data-field="memo" placeholder="作画メモ・備考など（例：表情の参考は3コマ目と同じ）">${esc(scene.memo||'')}</textarea>
     </section>`;
   }
+
+  /* ---------- scene card behavior ---------- */
+  const debouncedSave = debounce(async ()=>{ await saveProject(state.currentProject); }, 600);
+
+  function attachSceneCardListeners(card, scene, chapterId){
+    card.querySelector('[data-field="number"]').addEventListener('input', (e)=>{ scene.number=e.target.value; debouncedSave(); });
+    card.querySelector('.situation-input').addEventListener('input', (e)=>{ scene.situation=e.target.value; debouncedSave(); });
+    card.querySelector('.memo-input').addEventListener('input', (e)=>{ scene.memo=e.target.value; debouncedSave(); });
+
+    const upBtn = card.querySelector('[data-action="move-up"]');
+    const downBtn = card.querySelector('[data-action="move-down"]');
+    if(upBtn)   upBtn.addEventListener('click',   ()=> moveScene(scene.id, -1));
+    if(downBtn) downBtn.addEventListener('click', ()=> moveScene(scene.id, +1));
+
+    // move to another chapter
+    card.querySelector('[data-action="move-to-chapter"]').addEventListener('click', ()=>{
+      const proj = state.currentProject;
+      const options = [
+        ...(proj.chapters||[]).map(c=>`<div class="lib-item ${scene.chapterId===c.id?'selected':''}" data-target-chapter="${c.id}"><span class="lib-item-text">${esc(c.name)}</span></div>`),
+        `<div class="lib-item ${!scene.chapterId?'selected':''}" data-target-chapter=""><span class="lib-item-text">📁 未分類</span></div>`
+      ].join('');
+      openModal({
+        title:'チャプターを変更',
+        bodyHTML:`<div class="lib-list">${options}</div>`,
+        onMount:(ov)=>{
+          ov.querySelectorAll('.lib-item').forEach(item=>{
+            item.addEventListener('click', async ()=>{
+              const targetId = item.dataset.targetChapter||null;
+              closeModal();
+              await moveSceneToChapter(scene.id, targetId);
+            });
+          });
+        }
+      });
+    });
+
+    card.querySelector('[data-action="delete-scene"]').addEventListener('click', ()=>{
+      openConfirm('このシーンを削除します。元に戻せません。', '削除する', async ()=>{
+        const proj = state.currentProject;
+        proj.scenes = proj.scenes.filter(s=>s.id!==scene.id);
+        await saveProject(proj);
+        renderEditor();
+      });
+    });
+
+    bindBubbleRows(card, scene);
+    card.querySelector('[data-action="add-bubble"]').addEventListener('click', ()=>{
+      scene.bubbles.push({ id:uid(), type:'speech', text:'' });
+      saveProject(state.currentProject);
+      rerenderScene(scene);
+    });
+    bindChipRemovers(card, scene);
+    card.querySelector('[data-action="add-sfx"]').addEventListener('click', ()=>{ openLibraryModal({ mode:'pick', scene }); });
+  }
+
   const BUBBLE_TYPES = {
     thought: { label:'💭 心の声', placeholder:'思っていること' },
     speech:  { label:'💬 セリフ',  placeholder:'話している内容' },
@@ -858,54 +1224,6 @@ input{font-family:inherit;}
   }
   function chipHTML(tag, i){
     return `<span class="sfx-chip" data-tag="${esc(tag)}">🔊 ${esc(tag)}<button class="chip-x" data-action="remove-sfx" aria-label="削除">×</button></span>`;
-  }
-
-  /* ---------- scene card behavior ---------- */
-  const debouncedSave = debounce(async ()=>{ await saveProject(state.currentProject); }, 600);
-
-  function attachSceneCardListeners(card, scene){
-    // number
-    card.querySelector('[data-field="number"]').addEventListener('input', (e)=>{
-      scene.number = e.target.value; debouncedSave();
-    });
-    // situation
-    const situ = card.querySelector('.situation-input');
-    situ.addEventListener('input', (e)=>{ scene.situation = e.target.value; debouncedSave(); });
-
-    // memo
-    const memo = card.querySelector('.memo-input');
-    memo.addEventListener('input', (e)=>{ scene.memo = e.target.value; debouncedSave(); });
-
-    // move up / down
-    const upBtn = card.querySelector('[data-action="move-up"]');
-    const downBtn = card.querySelector('[data-action="move-down"]');
-    if(upBtn)   upBtn.addEventListener('click',   ()=> moveScene(scene.id, -1));
-    if(downBtn) downBtn.addEventListener('click', ()=> moveScene(scene.id, +1));
-
-    // delete scene
-    card.querySelector('[data-action="delete-scene"]').addEventListener('click', ()=>{
-      openConfirm('このシーンを削除します。元に戻せません。', '削除する', async ()=>{
-        const proj = state.currentProject;
-        proj.scenes = proj.scenes.filter(s=>s.id!==scene.id);
-        await saveProject(proj);
-        renderEditor();
-      });
-    });
-
-    // bubble list
-    bindBubbleRows(card, scene);
-
-    card.querySelector('[data-action="add-bubble"]').addEventListener('click', ()=>{
-      scene.bubbles.push({ id:uid(), type:'speech', text:'' });
-      saveProject(state.currentProject);
-      rerenderScene(scene);
-    });
-
-    // sfx chips
-    bindChipRemovers(card, scene);
-    card.querySelector('[data-action="add-sfx"]').addEventListener('click', ()=>{
-      openLibraryModal({ mode:'pick', scene });
-    });
   }
 
   function bindBubbleRows(card, scene){
