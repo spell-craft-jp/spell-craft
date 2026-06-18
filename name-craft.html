@@ -142,6 +142,33 @@ input{font-family:inherit;}
   font-size:18px; line-height:1; padding:6px 8px; border-radius:8px;
 }
 .scene-delete:active{ background:var(--danger-bg); color:var(--danger); }
+.scene-actions{
+  position:absolute; top:10px; right:10px;
+  display:flex; align-items:center; gap:4px;
+}
+.scene-move-btn{
+  background:var(--pill-bg); border:none; color:var(--ink-soft);
+  font-size:14px; line-height:1; padding:5px 8px; border-radius:8px;
+  transition:background .15s;
+}
+.scene-move-btn:active{ background:var(--primary-bg); color:var(--primary); }
+.scene-move-btn:disabled{ opacity:.25; pointer-events:none; }
+.scene-delete{
+  background:none; border:none; color:var(--ink-soft);
+  font-size:18px; line-height:1; padding:4px 6px; border-radius:8px;
+}
+.insert-row{
+  display:flex; align-items:center; gap:10px; margin:-6px 0 14px;
+}
+.insert-row::before,.insert-row::after{
+  content:''; flex:1; height:1px; background:var(--line);
+}
+.insert-btn{
+  flex-shrink:0; background:var(--primary-bg); border:none; border-radius:999px;
+  color:var(--primary-dark); font-size:12px; font-weight:700; padding:5px 14px;
+  white-space:nowrap;
+}
+.insert-btn:active{ background:#D3DEFB; }
 .field-label{
   display:flex; align-items:center; gap:6px;
   font-weight:700; font-size:12.5px;
@@ -678,8 +705,24 @@ input{font-family:inherit;}
     return String(max+1);
   }
 
+  function insertRowHTML(afterIndex){
+    return `<div class="insert-row"><button class="insert-btn" data-action="insert-scene" data-after="${afterIndex}">＋ ここに挿入</button></div>`;
+  }
+
   function renderEditor(){
     const proj = state.currentProject;
+    let scenesHTML = '';
+    if(proj.scenes.length === 0){
+      scenesHTML = `<div class="empty-state"><p>シーンがまだありません。<br>「＋ シーンを追加」から最初の1コマを作りましょう。</p></div>`;
+    } else {
+      // insert button before first scene
+      scenesHTML += insertRowHTML(-1);
+      proj.scenes.forEach((s, idx)=>{
+        scenesHTML += sceneCardHTML(s, idx, proj.scenes.length);
+        scenesHTML += insertRowHTML(idx);
+      });
+    }
+
     app.innerHTML = `
       <div class="app-header">
         <button class="header-back" id="back-to-list" aria-label="プロジェクト一覧へ">←</button>
@@ -687,21 +730,21 @@ input{font-family:inherit;}
         <button class="icon-btn" id="open-library-btn">🔊 SFX辞書</button>
       </div>
       <div class="screen" id="scene-list">
-        ${proj.scenes.length===0 ? `
-          <div class="empty-state">
-            <p>シーンがまだありません。<br>「＋ シーンを追加」から最初の1コマを作りましょう。</p>
-          </div>` : proj.scenes.map(s=>sceneCardHTML(s)).join('')}
+        ${scenesHTML}
       </div>
       <div class="bottom-bar">
-        <button class="add-scene-btn" id="add-scene-btn">＋ シーンを追加</button>
+        <button class="add-scene-btn" id="add-scene-btn">＋ 末尾にシーンを追加</button>
       </div>`;
 
-    document.getElementById('back-to-list').addEventListener('click', ()=>{
-      renderProjectList();
-    });
+    document.getElementById('back-to-list').addEventListener('click', ()=>{ renderProjectList(); });
     document.getElementById('rename-project-btn').addEventListener('click', openRenameProjectModal);
     document.getElementById('open-library-btn').addEventListener('click', ()=> openLibraryModal({mode:'manage'}));
-    document.getElementById('add-scene-btn').addEventListener('click', addScene);
+    document.getElementById('add-scene-btn').addEventListener('click', ()=> insertScene(proj.scenes.length - 1));
+
+    // insert buttons
+    app.querySelectorAll('[data-action="insert-scene"]').forEach(btn=>{
+      btn.addEventListener('click', ()=> insertScene(parseInt(btn.dataset.after, 10)));
+    });
 
     proj.scenes.forEach(s=>{
       const card = document.querySelector(`.scene-card[data-scene-id="${s.id}"]`);
@@ -731,17 +774,16 @@ input{font-family:inherit;}
     });
   }
 
-  async function addScene(){
+  function makeNewScene(proj){
+    return { id:uid(), number:nextSceneNumber(proj), situation:'', bubbles:[], onomatopoeia:[], memo:'' };
+  }
+
+  async function insertScene(afterIndex){
     const proj = state.currentProject;
-    const scene = {
-      id: uid(),
-      number: nextSceneNumber(proj),
-      situation:'',
-      bubbles: [],
-      onomatopoeia: [],
-      memo: ''
-    };
-    proj.scenes.push(scene);
+    const scene = makeNewScene(proj);
+    // afterIndex -1 means insert at the very top; otherwise insert after that index
+    const insertAt = afterIndex + 1;
+    proj.scenes.splice(insertAt, 0, scene);
     await saveProject(proj);
     renderEditor();
     requestAnimationFrame(()=>{
@@ -750,12 +792,32 @@ input{font-family:inherit;}
     });
   }
 
+  async function moveScene(sceneId, direction){
+    const proj = state.currentProject;
+    const idx = proj.scenes.findIndex(s=>s.id===sceneId);
+    if(idx < 0) return;
+    const newIdx = idx + direction;
+    if(newIdx < 0 || newIdx >= proj.scenes.length) return;
+    const [removed] = proj.scenes.splice(idx, 1);
+    proj.scenes.splice(newIdx, 0, removed);
+    await saveProject(proj);
+    renderEditor();
+    requestAnimationFrame(()=>{
+      const card = document.querySelector(`.scene-card[data-scene-id="${sceneId}"]`);
+      if(card) card.scrollIntoView({behavior:'smooth', block:'nearest'});
+    });
+  }
+
   /* ---------- scene card markup ---------- */
-  function sceneCardHTML(scene){
+  function sceneCardHTML(scene, idx, total){
     return `
     <section class="scene-card" data-scene-id="${scene.id}">
       <div class="slate"><span class="slate-icon">🖼</span><input class="slate-input" data-field="number" value="${esc(scene.number)}" maxlength="6" aria-label="シーン番号"></div>
-      <button class="scene-delete" data-action="delete-scene" aria-label="シーンを削除">×</button>
+      <div class="scene-actions">
+        <button class="scene-move-btn" data-action="move-up" aria-label="上へ移動" ${idx===0?'disabled':''}>↑</button>
+        <button class="scene-move-btn" data-action="move-down" aria-label="下へ移動" ${idx===total-1?'disabled':''}>↓</button>
+        <button class="scene-delete" data-action="delete-scene" aria-label="シーンを削除">×</button>
+      </div>
 
       <label class="field-label">📝 シチュエーション</label>
       <textarea class="situation-input" data-field="situation" placeholder="このシーンの状況を書く（例：教室で告白される直前）">${esc(scene.situation)}</textarea>
@@ -813,6 +875,12 @@ input{font-family:inherit;}
     // memo
     const memo = card.querySelector('.memo-input');
     memo.addEventListener('input', (e)=>{ scene.memo = e.target.value; debouncedSave(); });
+
+    // move up / down
+    const upBtn = card.querySelector('[data-action="move-up"]');
+    const downBtn = card.querySelector('[data-action="move-down"]');
+    if(upBtn)   upBtn.addEventListener('click',   ()=> moveScene(scene.id, -1));
+    if(downBtn) downBtn.addEventListener('click', ()=> moveScene(scene.id, +1));
 
     // delete scene
     card.querySelector('[data-action="delete-scene"]').addEventListener('click', ()=>{
