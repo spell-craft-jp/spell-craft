@@ -1,0 +1,1016 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>ネームCraft - 吹き出し・オノマトペ管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=M+PLUS+Rounded+1c:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-top:#E8EEFD;
+  --bg-bottom:#F6F8FF;
+  --card:#FFFFFF;
+  --ink:#2B3245;
+  --ink-soft:#8A93A8;
+  --line:#E7EAF3;
+  --primary:#3D63E3;
+  --primary-dark:#2F52C9;
+  --primary-bg:#E6ECFD;
+  --pill-bg:#F4F5F9;
+  --thought:#8B5CF6;
+  --thought-bg:#F1ECFD;
+  --speech:#3D63E3;
+  --speech-bg:#E7EDFD;
+  --caption:#16A34A;
+  --caption-bg:#E6F7EB;
+  --sfx:#F59E0B;
+  --sfx-bg:#FEF3DC;
+  --sfx-ink:#92400E;
+  --danger:#EF4444;
+  --danger-bg:#FDEAEA;
+  --shadow-sm:0 2px 8px rgba(61,90,210,.08), 0 1px 2px rgba(31,41,55,.04);
+  --shadow-md:0 6px 20px rgba(61,90,210,.14);
+  --font-display:'M PLUS Rounded 1c', sans-serif;
+  --font-en:'Fredoka', sans-serif;
+  --font-body:'M PLUS Rounded 1c', sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 480px);
+  color:var(--ink);
+  font-family:var(--font-body);
+  -webkit-tap-highlight-color:transparent;
+  min-height:100vh;
+}
+button{font-family:inherit; cursor:pointer;}
+textarea{font-family:inherit; font-size:15px;}
+input{font-family:inherit;}
+.hidden{display:none !important;}
+
+/* ---------- header ---------- */
+.app-header{
+  position:sticky; top:0; z-index:20;
+  background:rgba(255,255,255,.88); backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  padding:14px 16px;
+  display:flex; align-items:center; gap:10px;
+}
+.app-title{ display:flex; align-items:center; gap:8px; }
+.app-title-icon{
+  width:32px; height:32px; border-radius:10px; flex-shrink:0;
+  background:linear-gradient(135deg, var(--primary), #7C9CF7);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; box-shadow:var(--shadow-sm);
+}
+.app-title-jp{ font-weight:700; font-size:18px; color:var(--ink); }
+.app-title-en{ font-family:var(--font-en); font-weight:700; font-size:18px; color:var(--primary); margin-left:1px; }
+.header-back{
+  background:none;border:none;color:var(--ink-soft);font-size:20px;
+  padding:4px 8px; line-height:1; flex-shrink:0; border-radius:8px;
+}
+.header-back:active{ background:var(--pill-bg); }
+.header-name-btn{
+  background:none;border:none;color:var(--ink);
+  font-family:var(--font-display); font-weight:700; font-size:16px;
+  text-align:left; flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  padding:4px 0;
+}
+.header-spacer{flex:1;}
+.icon-btn{
+  background:var(--primary-bg); color:var(--primary-dark); border:none; border-radius:999px;
+  font-size:12.5px; font-weight:700; padding:7px 14px; flex-shrink:0;
+}
+.icon-btn:active{ background:#D3DEFB; }
+
+/* ---------- screens ---------- */
+.screen{ padding:16px 14px 110px; max-width:560px; margin:0 auto; }
+
+/* ---------- empty state ---------- */
+.empty-state{
+  text-align:center; padding:60px 20px; color:var(--ink-soft);
+}
+.empty-state p{ font-size:14px; line-height:1.7; margin:0 0 18px; }
+
+/* ---------- project list ---------- */
+.project-card{
+  display:block; width:100%; text-align:left;
+  background:var(--card); border:1px solid var(--line); border-radius:18px;
+  box-shadow:var(--shadow-sm);
+  padding:16px 18px; margin-bottom:14px; position:relative;
+}
+.project-card:active{ background:#FAFBFF; }
+.project-name{ display:block; font-weight:700; font-size:16px; margin-bottom:4px; padding-right:50px; color:var(--ink); }
+.project-meta{ display:block; font-size:12px; color:var(--ink-soft); }
+.project-delete{
+  position:absolute; top:16px; right:16px;
+  background:none; border:none; color:var(--ink-soft); font-size:12px;
+  padding:4px 6px;
+}
+.new-project-btn{
+  display:block; width:100%; background:var(--primary); color:#fff;
+  border:none; border-radius:14px; padding:15px;
+  font-family:var(--font-display); font-weight:700; font-size:15px; margin-top:6px;
+  box-shadow:var(--shadow-md);
+}
+.new-project-btn:active{ background:var(--primary-dark); }
+
+/* ---------- scene card ---------- */
+.scene-card{
+  background:var(--card); border:1px solid var(--line); border-radius:20px;
+  box-shadow:var(--shadow-sm);
+  padding:20px 18px 18px; margin:0 0 24px; position:relative;
+}
+.slate{
+  position:absolute; top:-12px; left:16px;
+  min-width:54px; height:38px; padding:0 10px;
+  background:var(--primary-bg); border-radius:12px;
+  display:flex; align-items:center; justify-content:center; gap:4px;
+  box-shadow:var(--shadow-sm);
+}
+.slate-icon{ font-size:13px; }
+.slate-input{
+  width:32px; text-align:center; background:transparent; border:none;
+  font-weight:700; font-size:14px; color:var(--primary-dark); padding:0;
+}
+.scene-delete{
+  position:absolute; top:10px; right:10px;
+  background:none; border:none; color:var(--ink-soft);
+  font-size:18px; line-height:1; padding:6px 8px; border-radius:8px;
+}
+.scene-delete:active{ background:var(--danger-bg); color:var(--danger); }
+.field-label{
+  display:flex; align-items:center; gap:6px;
+  font-weight:700; font-size:12.5px;
+  color:var(--ink-soft); letter-spacing:.02em;
+  margin:20px 0 8px;
+}
+.scene-card .field-label:first-of-type{ margin-top:24px; }
+.situation-input{
+  width:100%; min-height:54px; resize:vertical;
+  border:1.5px solid var(--line); border-radius:12px;
+  background:var(--pill-bg); padding:10px 12px; font-size:14.5px; line-height:1.6;
+  color:var(--ink);
+}
+.situation-input:focus{ outline:none; border-color:var(--primary); background:#fff; }
+
+/* ---------- bubbles ---------- */
+.bubble-list{ display:flex; flex-direction:column; gap:12px; }
+.bubble-row{ background:var(--pill-bg); border-radius:14px; padding:10px; }
+.bubble-row-head{ display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+.bubble-toggle{ display:flex; gap:4px; flex:1; flex-wrap:wrap; }
+.toggle-btn{
+  border:none; background:#fff; color:var(--ink-soft);
+  font-size:12px; font-weight:700; padding:6px 10px; border-radius:999px;
+}
+.toggle-btn[data-type="thought"].active{ background:var(--thought); color:#fff; }
+.toggle-btn[data-type="speech"].active{ background:var(--speech); color:#fff; }
+.toggle-btn[data-type="caption"].active{ background:var(--caption); color:#fff; }
+.bubble-shape{
+  background:#fff; border-radius:12px; padding:10px 12px;
+  border-left:4px solid var(--line);
+}
+.bubble-shape.thought{ border-left-color:var(--thought); }
+.bubble-shape.speech{ border-left-color:var(--speech); }
+.bubble-shape.caption{ border-left-color:var(--caption); }
+.bubble-text{
+  width:100%; border:none; background:transparent; resize:none;
+  font-size:14.5px; line-height:1.5; color:var(--ink); padding:0; overflow:hidden;
+}
+.bubble-text:focus{ outline:none; }
+.bubble-delete{
+  background:none; border:none; color:var(--ink-soft); font-size:15px;
+  padding:4px 8px; flex-shrink:0; border-radius:8px;
+}
+.bubble-delete:active{ background:var(--danger-bg); color:var(--danger); }
+.add-dashed{
+  display:block; width:100%; background:var(--primary-bg);
+  border:none; border-radius:12px;
+  color:var(--primary-dark); font-size:13.5px; font-weight:700; padding:11px;
+  margin-top:8px;
+}
+.add-dashed:active{ background:#D3DEFB; }
+.memo-input{
+  width:100%; min-height:44px; resize:vertical;
+  border:1.5px solid var(--line); border-radius:12px;
+  background:var(--pill-bg); padding:10px 12px; font-size:14px; line-height:1.6;
+  color:var(--ink);
+}
+.memo-input:focus{ outline:none; border-color:var(--primary); background:#fff; }
+
+/* ---------- sfx chips ---------- */
+.chip-list{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.sfx-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--sfx-bg); border:1.5px solid var(--sfx); color:var(--sfx-ink);
+  font-weight:700; font-size:13.5px; padding:6px 8px 6px 12px; border-radius:999px;
+}
+.chip-x{
+  background:none; border:none; color:var(--sfx-ink); font-size:13px;
+  padding:0 2px; line-height:1; opacity:.6;
+}
+.add-chip-btn{
+  background:var(--pill-bg); border:1.5px dashed var(--line); color:var(--ink-soft);
+  font-size:16px; font-weight:700; width:32px; height:32px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+}
+.add-chip-btn:active{ background:var(--primary-bg); border-color:var(--primary); color:var(--primary); }
+
+/* ---------- bottom bar ---------- */
+.bottom-bar{
+  position:fixed; left:0; right:0; bottom:0; z-index:20;
+  background:rgba(255,255,255,.9); backdrop-filter:blur(8px); border-top:1px solid var(--line);
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  display:flex; justify-content:center;
+}
+.add-scene-btn{
+  width:100%; max-width:530px; background:var(--primary); color:#fff;
+  border:none; border-radius:14px; padding:14px;
+  font-family:var(--font-display); font-weight:700; font-size:15px;
+  box-shadow:var(--shadow-md);
+}
+.add-scene-btn:active{ background:var(--primary-dark); }
+.save-status{
+  position:fixed; top:64px; right:14px; z-index:25;
+  font-size:12px; font-weight:700; color:var(--primary-dark); background:var(--primary-bg);
+  border:none; border-radius:999px; padding:6px 14px;
+  opacity:0; transition:opacity .3s; box-shadow:var(--shadow-sm);
+}
+.save-status.show{ opacity:1; }
+.save-status.warn{ background:var(--danger-bg); color:#B91C1C; }
+.storage-banner{
+  position:sticky; top:0; z-index:30;
+  background:var(--danger-bg); color:#9B1C1C; border-bottom:1px solid #F3C9C9;
+  font-size:12.5px; padding:9px 36px 9px 16px; line-height:1.5;
+}
+.storage-banner button{
+  position:absolute; right:10px; top:6px; background:none; border:none;
+  color:#9B1C1C; font-size:18px; padding:4px 8px;
+}
+
+/* ---------- modal ---------- */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(43,50,69,.4); z-index:50;
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .2s;
+}
+.modal-overlay.open{ opacity:1; pointer-events:auto; }
+.modal-sheet{
+  background:#fff; width:100%; max-width:560px;
+  border-radius:22px 22px 0 0;
+  max-height:84vh; display:flex; flex-direction:column;
+  transform:translateY(100%); transition:transform .25s ease;
+  padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -8px 30px rgba(43,50,69,.15);
+}
+.modal-overlay.open .modal-sheet{ transform:translateY(0); }
+.modal-sheet.center{ border-radius:20px; max-width:380px; margin:0 16px 16px; }
+.modal-header{
+  display:flex; align-items:center; gap:10px;
+  padding:18px 18px 12px; border-bottom:1px solid var(--line);
+}
+.modal-title{ font-family:var(--font-display); font-weight:700; font-size:16px; flex:1; color:var(--ink); }
+.modal-close{ background:none; border:none; font-size:20px; color:var(--ink-soft); padding:2px 8px; border-radius:8px; }
+.modal-body{ padding:16px 18px; overflow-y:auto; flex:1; }
+.modal-footer{ padding:14px 18px; border-top:1px solid var(--line); }
+.text-input{
+  width:100%; border:1.5px solid var(--line); border-radius:12px;
+  padding:11px 14px; font-size:15px; background:var(--pill-bg);
+}
+.text-input:focus{ outline:none; border-color:var(--primary); background:#fff; }
+.modal-primary-btn{
+  width:100%; background:var(--primary); color:#fff; border:none;
+  border-radius:12px; padding:13px; font-family:var(--font-display); font-weight:700; font-size:14.5px;
+}
+.modal-primary-btn:disabled{ opacity:.4; }
+.modal-danger-btn{
+  width:100%; background:var(--danger); color:#fff; border:none;
+  border-radius:12px; padding:13px; font-family:var(--font-display); font-weight:700; font-size:14.5px;
+}
+.modal-secondary-btn{
+  width:100%; background:var(--pill-bg); color:var(--ink-soft); border:none;
+  border-radius:12px; padding:12px; font-size:14px; font-weight:700; margin-top:8px;
+}
+.confirm-text{ font-size:14px; line-height:1.7; color:var(--ink); margin:0 0 4px; }
+.lib-search{ margin-bottom:12px; }
+.lib-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+.lib-item{
+  display:flex; align-items:center; gap:10px;
+  border:1.5px solid var(--line); border-radius:12px; padding:10px 12px;
+  background:#fff;
+}
+.lib-item.selected{ border-color:var(--sfx); background:var(--sfx-bg); }
+.lib-item-text{ flex:1; font-size:14.5px; font-weight:700; color:var(--ink); }
+.lib-item-check{
+  width:20px; height:20px; border:1.5px solid var(--line); border-radius:6px;
+  flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px;
+}
+.lib-item.selected .lib-item-check{ background:var(--sfx); border-color:var(--sfx); color:#fff; }
+.lib-item-del{ background:none; border:none; color:var(--ink-soft); font-size:13px; font-weight:700; flex-shrink:0; }
+.lib-add-row{ display:flex; gap:8px; }
+.lib-add-row .text-input{ flex:1; }
+.lib-add-row button{
+  background:var(--primary); color:#fff; border:none; border-radius:12px;
+  padding:0 18px; font-size:14px; font-weight:700; flex-shrink:0;
+}
+.lib-empty{ font-size:13px; color:var(--ink-soft); text-align:center; padding:20px 0; }
+</style>
+</head>
+<body>
+<div id="storage-banner" class="storage-banner hidden">
+  この環境では自動保存が使えないようです。「データ」から書き出して手元に保存してください。
+  <button id="storage-banner-close" aria-label="閉じる">×</button>
+</div>
+<div id="save-status" class="save-status">保存しました</div>
+<div id="app"></div>
+<div id="modal-root"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- utils ---------------- */
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  const BRAND_HTML = `<div class="app-title"><div class="app-title-icon">🗯️</div><span class="app-title-jp">ネーム</span><span class="app-title-en">Craft</span></div>`;
+  function esc(s){
+    return (s==null?'':String(s)).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function formatDate(ts){
+    if(!ts) return '';
+    const d = new Date(ts);
+    return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+  let saveTimer = null;
+  function flashSaved(){
+    const el = document.getElementById('save-status');
+    el.textContent = '保存しました';
+    el.classList.remove('warn');
+    el.classList.add('show');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=> el.classList.remove('show'), 1100);
+  }
+  function flashWarning(text){
+    const el = document.getElementById('save-status');
+    el.textContent = text;
+    el.classList.add('warn','show');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=> el.classList.remove('show'), 2400);
+  }
+  function debounce(fn, ms){
+    let t=null;
+    return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), ms); };
+  }
+  function autoGrow(ta){
+    ta.style.height='auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+
+  /* ---------------- storage layer ----------------
+     Uses localStorage (works on GitHub Pages / any normal browser).
+     Note: localStorage is disabled inside Claude.ai's own artifact preview,
+     so saving here won't work until you download this file or host it
+     (e.g. on GitHub Pages) and open it as a real page. The banner below
+     warns when storage isn't available, and the export/import buttons
+     act as a manual backup path either way. */
+  const KEY_PREFIX = 'namecraft:';
+  const STORAGE_OK = (function(){
+    try{
+      const k = KEY_PREFIX + '__test__';
+      localStorage.setItem(k, '1');
+      localStorage.removeItem(k);
+      return true;
+    }catch(e){ return false; }
+  })();
+
+  function safeGet(key){
+    try{ return localStorage.getItem(KEY_PREFIX + key); }
+    catch(e){ return null; }
+  }
+  function safeSet(key, valueObj){
+    try{ localStorage.setItem(KEY_PREFIX + key, JSON.stringify(valueObj)); return true; }
+    catch(e){ return false; }
+  }
+  function safeDelete(key){
+    try{ localStorage.removeItem(KEY_PREFIX + key); }catch(e){ /* ignore */ }
+  }
+
+  async function loadIndex(){
+    const raw = safeGet('projects-index');
+    if(!raw) return [];
+    try{ return JSON.parse(raw); }catch(e){ return []; }
+  }
+  async function saveIndex(idx){ return safeSet('projects-index', idx); }
+
+  async function loadProject(id){
+    const raw = safeGet('project:'+id);
+    if(!raw) return null;
+    try{ return JSON.parse(raw); }catch(e){ return null; }
+  }
+  // Keeps state.projectsIndex (the single source of truth in memory) up to date.
+  // Never re-reads the index from storage here -- doing that previously caused
+  // a race where a slightly-stale read could overwrite a just-created project.
+  function upsertIndexEntry(proj){
+    let entry = state.projectsIndex.find(p=>p.id===proj.id);
+    if(!entry){
+      entry = { id: proj.id, createdAt: proj.createdAt || Date.now() };
+      state.projectsIndex.push(entry);
+    }
+    entry.name = proj.name;
+    entry.updatedAt = proj.updatedAt;
+    entry.sceneCount = proj.scenes.length;
+  }
+  async function saveProject(proj){
+    proj.updatedAt = Date.now();
+    state.projectCache[proj.id] = proj;
+    const ok1 = safeSet('project:'+proj.id, proj);
+    upsertIndexEntry(proj);
+    const ok2 = await saveIndex(state.projectsIndex);
+    if(ok1 && ok2) flashSaved(); else flashWarning('保存できませんでした');
+  }
+  async function deleteProject(id){
+    safeDelete('project:'+id);
+    delete state.projectCache[id];
+    state.projectsIndex = state.projectsIndex.filter(p=>p.id!==id);
+    await saveIndex(state.projectsIndex);
+  }
+  async function loadLibrary(){
+    const raw = safeGet('sfx-library');
+    if(!raw) return [];
+    try{ return JSON.parse(raw); }catch(e){ return []; }
+  }
+  async function saveLibrary(lib){
+    const ok = safeSet('sfx-library', lib);
+    if(ok) flashSaved(); else flashWarning('保存できませんでした');
+  }
+
+  async function getLastProjectId(){ return safeGet('last-project-id'); }
+  async function setLastProjectId(id){ safeSet('last-project-id', id); }
+
+  /* ---------------- state ---------------- */
+  const state = {
+    projectsIndex: [],
+    library: [],
+    currentProject: null,
+    projectCache: {}   // id -> full project object already loaded/created this session
+  };
+
+  const app = document.getElementById('app');
+
+  /* ---------------- modal scaffold ---------------- */
+  const modalRoot = document.getElementById('modal-root');
+  function closeModal(){
+    const ov = modalRoot.querySelector('.modal-overlay');
+    if(!ov) return;
+    ov.classList.remove('open');
+    setTimeout(()=>{ modalRoot.innerHTML=''; }, 200);
+  }
+  function openModal({title, bodyHTML, footerHTML, center, onMount}){
+    modalRoot.innerHTML = `
+      <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-sheet ${center?'center':''}">
+          <div class="modal-header">
+            <div class="modal-title">${esc(title)}</div>
+            <button class="modal-close" data-action="close-modal" aria-label="閉じる">×</button>
+          </div>
+          <div class="modal-body">${bodyHTML}</div>
+          ${footerHTML ? `<div class="modal-footer">${footerHTML}</div>` : ''}
+        </div>
+      </div>`;
+    const ov = document.getElementById('modal-overlay');
+    ov.addEventListener('click', (e)=>{ if(e.target===ov) closeModal(); });
+    ov.querySelector('[data-action="close-modal"]').addEventListener('click', closeModal);
+    requestAnimationFrame(()=> ov.classList.add('open'));
+    if(onMount) onMount(ov);
+  }
+  function openConfirm(message, confirmLabel, onConfirm){
+    openModal({
+      title:'確認',
+      center:true,
+      bodyHTML:`<p class="confirm-text">${esc(message)}</p>`,
+      footerHTML:`
+        <button class="modal-danger-btn" id="confirm-yes">${esc(confirmLabel)}</button>
+        <button class="modal-secondary-btn" data-action="close-modal">キャンセル</button>`,
+      onMount:(ov)=>{
+        ov.querySelector('#confirm-yes').addEventListener('click', ()=>{ closeModal(); onConfirm(); });
+        ov.querySelector('[data-action="close-modal"]').addEventListener('click', closeModal);
+      }
+    });
+  }
+
+  /* ---------------- backup: export / import ---------------- */
+  async function gatherAllProjects(){
+    const list = [];
+    for(const entry of state.projectsIndex){
+      const proj = state.projectCache[entry.id] || await loadProject(entry.id);
+      if(proj) list.push(proj);
+    }
+    return list;
+  }
+
+  async function exportAllData(){
+    const projects = await gatherAllProjects();
+    const backup = {
+      app:'namecraft', version:1, exportedAt:new Date().toISOString(),
+      library: state.library, projects
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const d = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `namecraft-backup-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }
+
+  function importDataFromFile(file){
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      let data;
+      try{ data = JSON.parse(reader.result); }
+      catch(e){ flashWarning('読み込めるファイルではありません'); return; }
+      if(!data || !Array.isArray(data.projects)){ flashWarning('読み込めるファイルではありません'); return; }
+
+      openConfirm(`${data.projects.length}件のプロジェクトを読み込みます。同じプロジェクトが既にある場合は上書きされます。`, '読み込む', async ()=>{
+        if(Array.isArray(data.library)){
+          state.library = Array.from(new Set([...state.library, ...data.library]));
+          await saveLibrary(state.library);
+        }
+        for(const proj of data.projects){
+          if(!proj || !proj.id) continue;
+          state.projectCache[proj.id] = proj;
+          safeSet('project:'+proj.id, proj);
+          upsertIndexEntry(proj);
+        }
+        await saveIndex(state.projectsIndex);
+        renderProjectList();
+        flashSaved();
+      });
+    };
+    reader.readAsText(file);
+  }
+
+  function openDataModal(){
+    openModal({
+      title:'💾 データの書き出し・読み込み',
+      bodyHTML:`
+        <p class="confirm-text">スマホで作った内容をパソコンへ持っていく時などに使います。書き出したファイルを読み込むと、すべてのプロジェクトを復元・統合できます。</p>
+        <button class="modal-primary-btn" id="export-data-btn" style="margin-bottom:10px;">📦 書き出す（.jsonをダウンロード）</button>
+        <button class="modal-secondary-btn" id="import-data-btn">📂 ファイルから読み込む</button>
+        <input type="file" id="import-file-input" accept="application/json,.json" class="hidden">`,
+      onMount:(ov)=>{
+        ov.querySelector('#export-data-btn').addEventListener('click', async ()=>{
+          await exportAllData();
+        });
+        const fileInput = ov.querySelector('#import-file-input');
+        ov.querySelector('#import-data-btn').addEventListener('click', ()=> fileInput.click());
+        fileInput.addEventListener('change', (e)=>{
+          const file = e.target.files[0];
+          closeModal();
+          if(file) importDataFromFile(file);
+        });
+      }
+    });
+  }
+
+  /* ---------------- project list screen ---------------- */
+  function renderProjectList(){
+    state.currentProject = null;
+    const header = `<div class="app-header">${BRAND_HTML}<div class="header-spacer"></div><button class="icon-btn" id="data-btn">💾 データ</button></div>`;
+    if(state.projectsIndex.length===0){
+      app.innerHTML = `
+        ${header}
+        <div class="screen">
+          <div class="empty-state">
+            <p>まだプロジェクトがありません。<br>イラスト集ごとにプロジェクトを作って、シーンの吹き出しとオノマトペを整理しましょう。</p>
+          </div>
+          <button class="new-project-btn" id="new-project-btn">＋ 新規プロジェクト</button>
+        </div>`;
+    } else {
+      const sorted = [...state.projectsIndex].sort((a,b)=>b.updatedAt-a.updatedAt);
+      app.innerHTML = `
+        ${header}
+        <div class="screen">
+          ${sorted.map(p=>`
+            <button class="project-card" data-project-id="${p.id}">
+              <span class="project-name">${esc(p.name)}</span>
+              <span class="project-meta">${p.sceneCount||0}シーン ・ ${formatDate(p.updatedAt)}更新</span>
+              <span class="project-delete" data-action="delete-project" data-project-id="${p.id}">削除</span>
+            </button>`).join('')}
+          <button class="new-project-btn" id="new-project-btn">＋ 新規プロジェクト</button>
+        </div>`;
+    }
+    const newBtn = document.getElementById('new-project-btn');
+    if(newBtn) newBtn.addEventListener('click', openNewProjectModal);
+    document.getElementById('data-btn').addEventListener('click', openDataModal);
+
+    app.querySelectorAll('.project-card').forEach(card=>{
+      card.addEventListener('click', (e)=>{
+        if(e.target.closest('[data-action="delete-project"]')) return;
+        openProject(card.dataset.projectId);
+      });
+    });
+    app.querySelectorAll('[data-action="delete-project"]').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const id = btn.dataset.projectId;
+        const p = state.projectsIndex.find(x=>x.id===id);
+        openConfirm(`「${p?p.name:''}」を削除します。中のシーンもすべて削除され、元に戻せません。`, '削除する', async ()=>{
+          await deleteProject(id);
+          renderProjectList();
+        });
+      });
+    });
+  }
+
+  function openNewProjectModal(){
+    openModal({
+      title:'新規プロジェクト',
+      center:true,
+      bodyHTML:`<input class="text-input" id="new-project-name" placeholder="例：星明かりのノクターン" maxlength="40">`,
+      footerHTML:`<button class="modal-primary-btn" id="create-project-btn" disabled>作成する</button>`,
+      onMount:(ov)=>{
+        const input = ov.querySelector('#new-project-name');
+        const btn = ov.querySelector('#create-project-btn');
+        input.addEventListener('input', ()=>{ btn.disabled = input.value.trim().length===0; });
+        input.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !btn.disabled) btn.click(); });
+        btn.addEventListener('click', async ()=>{
+          const name = input.value.trim();
+          if(!name) return;
+          const proj = { id:uid(), name, scenes:[], createdAt:Date.now(), updatedAt:Date.now() };
+          closeModal();
+          await openProject(proj.id, proj); // proj passed directly: opens instantly, saves in background
+        });
+        setTimeout(()=>input.focus(), 250);
+      }
+    });
+  }
+
+  /* ---------------- editor screen ---------------- */
+  async function openProject(id, freshProj){
+    let proj = freshProj || state.projectCache[id];
+    if(!proj){
+      proj = await loadProject(id);
+      if(!proj){
+        flashWarning('読み込みに失敗しました');
+        return;
+      }
+    }
+    state.projectCache[id] = proj;
+    state.currentProject = proj;
+    renderEditor();                 // render first so the UI reacts immediately
+    if(freshProj) await saveProject(proj); // brand-new project: persist it now
+    await setLastProjectId(id);
+  }
+
+  function nextSceneNumber(proj){
+    let max = 0;
+    proj.scenes.forEach(s=>{
+      const n = parseInt(s.number, 10);
+      if(!isNaN(n) && n>max) max = n;
+    });
+    return String(max+1);
+  }
+
+  function renderEditor(){
+    const proj = state.currentProject;
+    app.innerHTML = `
+      <div class="app-header">
+        <button class="header-back" id="back-to-list" aria-label="プロジェクト一覧へ">←</button>
+        <button class="header-name-btn" id="rename-project-btn">${esc(proj.name)}</button>
+        <button class="icon-btn" id="open-library-btn">🔊 SFX辞書</button>
+      </div>
+      <div class="screen" id="scene-list">
+        ${proj.scenes.length===0 ? `
+          <div class="empty-state">
+            <p>シーンがまだありません。<br>「＋ シーンを追加」から最初の1コマを作りましょう。</p>
+          </div>` : proj.scenes.map(s=>sceneCardHTML(s)).join('')}
+      </div>
+      <div class="bottom-bar">
+        <button class="add-scene-btn" id="add-scene-btn">＋ シーンを追加</button>
+      </div>`;
+
+    document.getElementById('back-to-list').addEventListener('click', ()=>{
+      renderProjectList();
+    });
+    document.getElementById('rename-project-btn').addEventListener('click', openRenameProjectModal);
+    document.getElementById('open-library-btn').addEventListener('click', ()=> openLibraryModal({mode:'manage'}));
+    document.getElementById('add-scene-btn').addEventListener('click', addScene);
+
+    proj.scenes.forEach(s=>{
+      const card = document.querySelector(`.scene-card[data-scene-id="${s.id}"]`);
+      if(card) attachSceneCardListeners(card, s);
+    });
+  }
+
+  function openRenameProjectModal(){
+    const proj = state.currentProject;
+    openModal({
+      title:'プロジェクト名を変更',
+      center:true,
+      bodyHTML:`<input class="text-input" id="rename-input" value="${esc(proj.name)}" maxlength="40">`,
+      footerHTML:`<button class="modal-primary-btn" id="rename-save-btn">保存する</button>`,
+      onMount:(ov)=>{
+        const input = ov.querySelector('#rename-input');
+        ov.querySelector('#rename-save-btn').addEventListener('click', async ()=>{
+          const name = input.value.trim();
+          if(!name) return;
+          proj.name = name;
+          await saveProject(proj);
+          closeModal();
+          renderEditor();
+        });
+        setTimeout(()=>{ input.focus(); input.select(); }, 250);
+      }
+    });
+  }
+
+  async function addScene(){
+    const proj = state.currentProject;
+    const scene = {
+      id: uid(),
+      number: nextSceneNumber(proj),
+      situation:'',
+      bubbles: [],
+      onomatopoeia: [],
+      memo: ''
+    };
+    proj.scenes.push(scene);
+    await saveProject(proj);
+    renderEditor();
+    requestAnimationFrame(()=>{
+      const card = document.querySelector(`.scene-card[data-scene-id="${scene.id}"]`);
+      if(card) card.scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  }
+
+  /* ---------- scene card markup ---------- */
+  function sceneCardHTML(scene){
+    return `
+    <section class="scene-card" data-scene-id="${scene.id}">
+      <div class="slate"><span class="slate-icon">🖼</span><input class="slate-input" data-field="number" value="${esc(scene.number)}" maxlength="6" aria-label="シーン番号"></div>
+      <button class="scene-delete" data-action="delete-scene" aria-label="シーンを削除">×</button>
+
+      <label class="field-label">📝 シチュエーション</label>
+      <textarea class="situation-input" data-field="situation" placeholder="このシーンの状況を書く（例：教室で告白される直前）">${esc(scene.situation)}</textarea>
+
+      <label class="field-label">🗯️ ふきだし</label>
+      <div class="bubble-list" data-role="bubble-list">${scene.bubbles.map(b=>bubbleRowHTML(b)).join('')}</div>
+      <button class="add-dashed" data-action="add-bubble">＋ ふきだしを追加</button>
+
+      <label class="field-label">🔊 オノマトペ</label>
+      <div class="chip-list" data-role="chip-list">
+        ${scene.onomatopoeia.map((tag,i)=>chipHTML(tag,i)).join('')}
+        <button class="add-chip-btn" data-action="add-sfx" aria-label="オノマトペを追加">＋</button>
+      </div>
+
+      <label class="field-label">✏️ メモ</label>
+      <textarea class="memo-input" data-field="memo" placeholder="作画メモ・備考など（例：表情の参考は3コマ目と同じ）">${esc(scene.memo||'')}</textarea>
+    </section>`;
+  }
+  const BUBBLE_TYPES = {
+    thought: { label:'💭 心の声', placeholder:'思っていること' },
+    speech:  { label:'💬 セリフ',  placeholder:'話している内容' },
+    caption: { label:'📋 状況',    placeholder:'状況・地の文の説明（例：放課後の教室）' }
+  };
+  function bubbleRowHTML(bubble){
+    const type = BUBBLE_TYPES[bubble.type] ? bubble.type : 'speech';
+    return `
+    <div class="bubble-row" data-bubble-id="${bubble.id}">
+      <div class="bubble-row-head">
+        <div class="bubble-toggle">
+          ${Object.keys(BUBBLE_TYPES).map(t=>`<button class="toggle-btn ${t===type?'active':''}" data-action="set-type" data-type="${t}">${BUBBLE_TYPES[t].label}</button>`).join('')}
+        </div>
+        <button class="bubble-delete" data-action="delete-bubble" aria-label="ふきだしを削除">×</button>
+      </div>
+      <div class="bubble-shape ${type}">
+        <textarea class="bubble-text" data-field="text" rows="1" placeholder="${BUBBLE_TYPES[type].placeholder}">${esc(bubble.text)}</textarea>
+      </div>
+    </div>`;
+  }
+  function chipHTML(tag, i){
+    return `<span class="sfx-chip" data-tag="${esc(tag)}">🔊 ${esc(tag)}<button class="chip-x" data-action="remove-sfx" aria-label="削除">×</button></span>`;
+  }
+
+  /* ---------- scene card behavior ---------- */
+  const debouncedSave = debounce(async ()=>{ await saveProject(state.currentProject); }, 600);
+
+  function attachSceneCardListeners(card, scene){
+    // number
+    card.querySelector('[data-field="number"]').addEventListener('input', (e)=>{
+      scene.number = e.target.value; debouncedSave();
+    });
+    // situation
+    const situ = card.querySelector('.situation-input');
+    situ.addEventListener('input', (e)=>{ scene.situation = e.target.value; debouncedSave(); });
+
+    // memo
+    const memo = card.querySelector('.memo-input');
+    memo.addEventListener('input', (e)=>{ scene.memo = e.target.value; debouncedSave(); });
+
+    // delete scene
+    card.querySelector('[data-action="delete-scene"]').addEventListener('click', ()=>{
+      openConfirm('このシーンを削除します。元に戻せません。', '削除する', async ()=>{
+        const proj = state.currentProject;
+        proj.scenes = proj.scenes.filter(s=>s.id!==scene.id);
+        await saveProject(proj);
+        renderEditor();
+      });
+    });
+
+    // bubble list
+    bindBubbleRows(card, scene);
+
+    card.querySelector('[data-action="add-bubble"]').addEventListener('click', ()=>{
+      scene.bubbles.push({ id:uid(), type:'speech', text:'' });
+      saveProject(state.currentProject);
+      rerenderScene(scene);
+    });
+
+    // sfx chips
+    bindChipRemovers(card, scene);
+    card.querySelector('[data-action="add-sfx"]').addEventListener('click', ()=>{
+      openLibraryModal({ mode:'pick', scene });
+    });
+  }
+
+  function bindBubbleRows(card, scene){
+    card.querySelectorAll('.bubble-row').forEach(row=>{
+      const bubbleId = row.dataset.bubbleId;
+      const bubble = scene.bubbles.find(b=>b.id===bubbleId);
+      if(!bubble) return;
+
+      const ta = row.querySelector('.bubble-text');
+      autoGrow(ta);
+      ta.addEventListener('input', ()=>{ bubble.text = ta.value; autoGrow(ta); debouncedSave(); });
+
+      row.querySelectorAll('[data-action="set-type"]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          if(bubble.type===btn.dataset.type) return;
+          bubble.type = btn.dataset.type;
+          saveProject(state.currentProject);
+          rerenderScene(scene);
+        });
+      });
+
+      row.querySelector('[data-action="delete-bubble"]').addEventListener('click', ()=>{
+        scene.bubbles = scene.bubbles.filter(b=>b.id!==bubbleId);
+        saveProject(state.currentProject);
+        rerenderScene(scene);
+      });
+    });
+  }
+
+  function bindChipRemovers(card, scene){
+    card.querySelectorAll('.sfx-chip').forEach(chip=>{
+      chip.querySelector('.chip-x').addEventListener('click', ()=>{
+        const tag = chip.dataset.tag;
+        scene.onomatopoeia = scene.onomatopoeia.filter(t=>t!==tag);
+        saveProject(state.currentProject);
+        rerenderScene(scene);
+      });
+    });
+  }
+
+  function rerenderScene(scene){
+    const old = document.querySelector(`.scene-card[data-scene-id="${scene.id}"]`);
+    if(!old) return;
+    old.outerHTML = sceneCardHTML(scene);
+    const fresh = document.querySelector(`.scene-card[data-scene-id="${scene.id}"]`);
+    attachSceneCardListeners(fresh, scene);
+  }
+
+  /* ---------------- onomatopoeia library modal ---------------- */
+  function openLibraryModal({mode, scene}){
+    let selected = mode==='pick' ? new Set(scene.onomatopoeia) : null;
+    let filter = '';
+
+    function listHTML(){
+      const items = state.library.filter(t=>t.includes(filter));
+      if(items.length===0){
+        return `<div class="lib-empty">登録されたオノマトペがありません。下のフォームから追加してください。</div>`;
+      }
+      return `<div class="lib-list">${items.map(tag=>{
+        const isSel = mode==='pick' && selected.has(tag);
+        return `
+        <div class="lib-item ${isSel?'selected':''}" data-tag="${esc(tag)}">
+          ${mode==='pick' ? `<span class="lib-item-check">${isSel?'✓':''}</span>` : ''}
+          <span class="lib-item-text">${esc(tag)}</span>
+          <button class="lib-item-del" data-action="lib-delete" data-tag="${esc(tag)}">削除</button>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
+    function bodyHTML(){
+      return `
+        <input class="text-input lib-search" id="lib-search" placeholder="検索（例：ドキッ）" value="${esc(filter)}">
+        <div id="lib-list-wrap">${listHTML()}</div>
+        <div class="lib-add-row">
+          <input class="text-input" id="lib-new-tag" placeholder="新しいオノマトペを登録" maxlength="20">
+          <button id="lib-add-btn">追加</button>
+        </div>`;
+    }
+
+    openModal({
+      title: mode==='pick' ? '🔊 オノマトペを選ぶ' : '🔊 オノマトペ辞書',
+      bodyHTML: bodyHTML(),
+      footerHTML: mode==='pick' ? `<button class="modal-primary-btn" id="lib-done-btn">完了</button>` : '',
+      onMount:(ov)=>{
+        wireLibraryEvents(ov);
+        if(mode==='pick'){
+          ov.querySelector('#lib-done-btn').addEventListener('click', async ()=>{
+            scene.onomatopoeia = Array.from(selected);
+            await saveProject(state.currentProject);
+            closeModal();
+            rerenderScene(scene);
+          });
+        }
+      }
+    });
+
+    function wireLibraryEvents(ov){
+      const search = ov.querySelector('#lib-search');
+      search.addEventListener('input', ()=>{
+        filter = search.value.trim();
+        ov.querySelector('#lib-list-wrap').innerHTML = listHTML();
+        wireListEvents(ov);
+      });
+      wireListEvents(ov);
+
+      ov.querySelector('#lib-add-btn').addEventListener('click', async ()=>{
+        const input = ov.querySelector('#lib-new-tag');
+        const val = input.value.trim();
+        if(!val) return;
+        if(!state.library.includes(val)){
+          state.library.push(val);
+          await saveLibrary(state.library);
+        }
+        if(mode==='pick') selected.add(val);
+        input.value='';
+        filter='';
+        search.value='';
+        ov.querySelector('#lib-list-wrap').innerHTML = listHTML();
+        wireListEvents(ov);
+      });
+      ov.querySelector('#lib-new-tag').addEventListener('keydown', (e)=>{
+        if(e.key==='Enter') ov.querySelector('#lib-add-btn').click();
+      });
+    }
+
+    function wireListEvents(ov){
+      ov.querySelectorAll('.lib-item').forEach(item=>{
+        item.addEventListener('click', (e)=>{
+          if(e.target.closest('[data-action="lib-delete"]')) return;
+          if(mode!=='pick') return;
+          const tag = item.dataset.tag;
+          if(selected.has(tag)) selected.delete(tag); else selected.add(tag);
+          ov.querySelector('#lib-list-wrap').innerHTML = listHTML();
+          wireListEvents(ov);
+        });
+      });
+      ov.querySelectorAll('[data-action="lib-delete"]').forEach(btn=>{
+        btn.addEventListener('click', async (e)=>{
+          e.stopPropagation();
+          const tag = btn.dataset.tag;
+          state.library = state.library.filter(t=>t!==tag);
+          await saveLibrary(state.library);
+          if(mode==='pick') selected.delete(tag);
+          ov.querySelector('#lib-list-wrap').innerHTML = listHTML();
+          wireListEvents(ov);
+        });
+      });
+    }
+  }
+
+  /* ---------------- init ---------------- */
+  async function init(){
+    if(!STORAGE_OK){
+      document.getElementById('storage-banner').classList.remove('hidden');
+    }
+    document.getElementById('storage-banner-close').addEventListener('click', ()=>{
+      document.getElementById('storage-banner').classList.add('hidden');
+    });
+
+    app.innerHTML = `<div class="app-header">${BRAND_HTML}</div><div class="screen"><div class="empty-state"><p>読み込み中…</p></div></div>`;
+    state.projectsIndex = await loadIndex();
+    state.library = await loadLibrary();
+
+    const lastId = await getLastProjectId();
+    if(lastId && state.projectsIndex.some(p=>p.id===lastId)){
+      await openProject(lastId);
+    } else {
+      renderProjectList();
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
