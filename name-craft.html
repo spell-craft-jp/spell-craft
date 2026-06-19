@@ -233,8 +233,17 @@ input{font-family:inherit;}
 .chapter-action-btn{
   background:none; border:none; color:var(--ink-soft);
   font-size:12px; font-weight:700; padding:5px 8px; border-radius:8px;
+  position:relative; overflow:hidden; -webkit-user-select:none; user-select:none;
 }
 .chapter-action-btn:active{ background:var(--pill-bg); }
+.chapter-action-btn .hold-ring{
+  position:absolute; inset:0; border-radius:8px;
+  background:var(--danger); opacity:0; transform:scaleX(0); transform-origin:left;
+  transition:none; pointer-events:none;
+}
+.chapter-action-btn.holding .hold-ring{
+  opacity:.18; transform:scaleX(1); transition:transform .65s linear;
+}
 .chapter-body{ display:none; padding:0 14px 14px; }
 .chapter-card.open .chapter-body{ display:block; }
 .chapter-footer{
@@ -840,7 +849,7 @@ input{font-family:inherit;}
         <button class="chapter-name-btn" data-action="rename-chapter">${esc(chapter.name)}</button>
         <span class="chapter-count">${scenes.length}ページ</span>
         <div class="chapter-header-actions">
-          <button class="chapter-action-btn" data-action="delete-chapter" title="チャプターを削除">🗑</button>
+          <button class="chapter-action-btn" data-action="delete-chapter" title="長押しで削除">🗑<span class="hold-ring"></span></button>
         </div>
         <button class="chapter-chevron" data-action="toggle-chapter" aria-label="開閉">▼</button>
       </div>
@@ -895,7 +904,8 @@ input{font-family:inherit;}
         <div class="scene-count-bar">
           <span class="scene-count-badge">🖼 全${proj.scenes.length}ページ</span>
           <span class="count-bar-spacer"></span>
-          <button class="add-chapter-btn" id="add-chapter-btn">＋ チャプター追加</button>
+          <button class="add-chapter-btn" id="autonumber-btn">🔢 自動採番</button>
+          <button class="add-chapter-btn" id="add-chapter-btn" style="margin-left:6px;">＋ チャプター追加</button>
         </div>
         ${chaptersHTML}
       </div>
@@ -908,6 +918,7 @@ input{font-family:inherit;}
     document.getElementById('rename-project-btn').addEventListener('click', openRenameProjectModal);
     document.getElementById('open-library-btn').addEventListener('click', ()=> openLibraryModal({mode:'manage'}));
     document.getElementById('add-chapter-btn').addEventListener('click', openAddChapterModal);
+    document.getElementById('autonumber-btn').addEventListener('click', applyAutoNumber);
     document.getElementById('add-scene-btn').addEventListener('click', ()=> insertScene(null, null));
 
     // --- settings card ---
@@ -941,9 +952,27 @@ input{font-family:inherit;}
       const renameBtn = card.querySelector('[data-action="rename-chapter"]');
       if(renameBtn) renameBtn.addEventListener('click', ()=> chapter && openRenameChapterModal(chapter));
 
-      // delete chapter
+      // delete chapter — long press only (誤タップ防止)
       const delBtn = card.querySelector('[data-action="delete-chapter"]');
-      if(delBtn) delBtn.addEventListener('click', ()=> chapter && openDeleteChapterModal(chapter));
+      if(delBtn && chapter){
+        let holdTimer = null;
+        const startHold = ()=>{
+          delBtn.classList.add('holding');
+          holdTimer = setTimeout(()=>{
+            delBtn.classList.remove('holding');
+            openDeleteChapterModal(chapter);
+          }, 650);
+        };
+        const cancelHold = ()=>{
+          clearTimeout(holdTimer); holdTimer = null;
+          delBtn.classList.remove('holding');
+        };
+        delBtn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); startHold(); });
+        delBtn.addEventListener('pointerup',    cancelHold);
+        delBtn.addEventListener('pointerleave', cancelHold);
+        delBtn.addEventListener('pointercancel',cancelHold);
+        delBtn.addEventListener('click', (e)=>e.preventDefault());
+      }
 
       // append scene to chapter (footer button)
       const appendBtn = card.querySelector('[data-action="append-scene-to-chapter"]');
@@ -965,6 +994,37 @@ input{font-family:inherit;}
         if(sc) attachSceneCardListeners(sc, s, chapterId);
       });
     });
+  }
+
+  /* ---- auto-numbering ---- */
+  async function applyAutoNumber(){
+    const proj = state.currentProject;
+    const pad = (n, len) => String(n).padStart(len, '0');
+
+    // Number scenes in each chapter in order
+    (proj.chapters||[]).forEach((ch, chIdx)=>{
+      const chNum = pad(chIdx + 1, 2);
+      let sceneSeq = 1;
+      proj.scenes.forEach(s=>{
+        if((s.chapterId||null) === ch.id){
+          s.number = `${chNum}-${pad(sceneSeq, 3)}`;
+          sceneSeq++;
+        }
+      });
+    });
+
+    // Ungrouped scenes get prefix 00-
+    const knownIds = new Set((proj.chapters||[]).map(c=>c.id));
+    let seq = 1;
+    proj.scenes.forEach(s=>{
+      if(!s.chapterId || !knownIds.has(s.chapterId)){
+        s.number = `00-${pad(seq, 3)}`;
+        seq++;
+      }
+    });
+
+    await saveProject(proj);
+    renderEditor();
   }
 
   /* ---- chapter CRUD ---- */
