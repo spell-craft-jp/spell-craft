@@ -82,6 +82,9 @@
 
   /* ── main layout ── */
   .view { display: none; padding: 20px 20px; max-width: 900px; margin: 0 auto; }
+  #view-builder-outer { max-width: 100%; padding: 0; margin: 0; }
+  #view-builder { max-width: 100%; padding: 0; }
+  #view-builder.active { display: block; } /* builder-splitがgridを担当 */
   .view.active { display: block; }
 
   /* ── presets ── */
@@ -131,11 +134,32 @@
     box-shadow: 0 1px 3px rgba(100,120,200,0.08);
   }
   .chip:hover { background: rgba(99,102,241,.08); color: var(--text); border-color: rgba(99,102,241,.3); }
+
+  /* ── CUSTOM TOOLTIP ── */
+  .chip-tooltip {
+    position: fixed; z-index: 9999;
+    background: var(--ink, #1e2a4a);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; line-height: 1.5;
+    padding: 6px 10px; border-radius: 8px;
+    max-width: 280px; word-break: break-all;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    pointer-events: none;
+    opacity: 0; transition: opacity .15s;
+  }
+  .chip-tooltip.visible { opacity: 1; }
+  .chip-tooltip::before {
+    content: 'EN:';
+    display: block; font-size: 9px; font-weight: 700;
+    color: rgba(255,255,255,.45); letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  .chip.selected { color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
   .chip.selected-em { color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.18); outline: 2px solid rgba(255,255,255,0.6); outline-offset: -2px; }
   .chip.selected-em::after { content: ' ★'; font-size: 10px; }
   .chip.selected-strong { color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.25); outline: 2px solid #fff; outline-offset: -2px; }
   .chip.selected-strong::after { content: ' ★★'; font-size: 10px; }
-  .chip.selected { color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
 
   /* ── custom input ── */
   .custom-row {
@@ -409,6 +433,14 @@
     font-family: 'Zen Kaku Gothic New', sans-serif;
   }
   .btn-restore:hover { background: rgba(120,139,170,.18); color: var(--text); }
+  .btn-reset-default {
+    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid var(--border); color: var(--muted);
+    background: var(--surface); cursor: pointer; transition: all .15s;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+  }
+  .btn-reset-default:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,.05); }
+
   #restore-file-input { display: none; }
 
   /* ── PRESETS EDITOR ── */
@@ -466,6 +498,19 @@
     transition: transform .2s, box-shadow .2s;
   }
   .theme-toggle:hover { transform: scale(1.1); box-shadow: 0 6px 18px rgba(0,0,0,0.18); }
+  .refresh-btn {
+    position: fixed; bottom: 72px; right: 20px; z-index: 100;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .2s, box-shadow .2s;
+    font-family: sans-serif;
+  }
+  .refresh-btn:hover { transform: scale(1.1) rotate(180deg); box-shadow: 0 6px 18px rgba(0,0,0,0.14); }
+
 
   /* ── TAG SEARCH ── */
   .search-bar-wrap {
@@ -552,175 +597,9 @@
     content: ''; flex: 1; height: 1px; background: var(--border);
   }
 
-  /* ── FREE VERSION LOCKED FEATURES ── */
-  .locked-feature {
-    position: relative; opacity: .5; pointer-events: none;
-    user-select: none;
-  }
-  .locked-feature::after {
-    content: ''; position: absolute; inset: 0;
-    background: repeating-linear-gradient(
-      -45deg, transparent, transparent 4px,
-      rgba(120,130,160,0.15) 4px, rgba(120,130,160,0.15) 5px
-    );
-    border-radius: 8px;
-    pointer-events: none;
-  }
-  .locked-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 10px; font-weight: 700; color: var(--muted);
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 999px; padding: 3px 10px;
-    pointer-events: none;
-  }
-  .locked-row {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  }
-  .preset-limit-info {
-    font-size: 11px; color: var(--muted); padding: 6px 0;
-  }
-  .preset-limit-info span { color: var(--accent); font-weight: 700; }
-  .free-banner {
-    background: linear-gradient(90deg, rgba(14,165,233,.08), rgba(99,102,241,.08));
-    border-bottom: 1px solid rgba(99,102,241,.15);
-    padding: 10px 20px;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 8px;
-  }
-  .free-banner-text {
-    font-size: 12px; color: var(--muted);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .free-banner-text strong { color: var(--text); }
-  .free-limit-bar {
-    display: flex; align-items: center; gap: 8px; font-size: 12px;
-  }
-  .free-limit-track {
-    width: 100px; height: 6px; border-radius: 999px;
-    background: var(--surface2); overflow: hidden;
-  }
-  .free-limit-fill {
-    height: 100%; border-radius: 999px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    transition: width .3s;
-  }
-  .free-limit-fill.warning { background: #f59e0b; }
-  .free-limit-fill.full { background: var(--danger); }
-  .btn-upgrade {
-    padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 700;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    color: #fff; border: none; cursor: pointer;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-    text-decoration: none; display: inline-block;
-    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
-  }
-  .btn-upgrade:hover { opacity: .9; }
-  .btn-reset-default {
-    padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700;
-    border: 1.5px solid var(--border); color: var(--muted);
-    background: var(--white); cursor: pointer; transition: all .15s;
-    font-family: 'Zen Kaku Gothic New', sans-serif;
-  }
-  .btn-reset-default:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,.05); }
-  .refresh-btn {
-    position: fixed; bottom: 72px; right: 20px; z-index: 100;
-    width: 42px; height: 42px; border-radius: 50%;
-    border: 1.5px solid var(--border);
-    background: var(--surface);
-    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-    cursor: pointer; font-size: 16px;
-    display: flex; align-items: center; justify-content: center;
-    transition: transform .3s, box-shadow .2s;
-    font-family: sans-serif;
-  }
-  .refresh-btn:hover { transform: scale(1.1) rotate(180deg); box-shadow: 0 6px 18px rgba(0,0,0,0.14); }
-
-  .tag-limit-warning {
-    display: none; padding: 12px 16px; border-radius: 10px;
-    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
-    font-size: 13px; color: var(--danger); margin: 12px 0;
-    text-align: center;
-  }
-
-  /* ── MOBILE OPTIMIZATION ── */
-  @media (max-width: 640px) {
-
-    /* ヘッダー */
-    header { padding: 16px 16px 12px; }
-    header h1 { font-size: 17px; letter-spacing: .5px; }
-    header p { font-size: 10px; }
-    .version-badge { font-size: 9px; padding: 2px 7px; }
-
-    /* 無料版バナー */
-    .free-banner { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
-    .free-banner-text { font-size: 11px; }
-    .free-limit-track { width: 70px; }
-    .btn-upgrade { font-size: 11px; padding: 5px 12px; }
-
-    /* タブ */
-    .tabs { padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tab { padding: 10px 12px; font-size: 11px; }
-
-    /* 検索バー */
-    .search-bar-wrap { padding: 8px 12px; }
-    .search-bar { font-size: 13px; padding: 10px 14px 10px 36px; }
-
-    /* ビュー */
-    .view { padding: 14px 12px 80px; }
-
-    /* プリセットボタン */
-    .preset-btn { font-size: 11px; padding: 6px 12px; }
-
-    /* カテゴリカード */
-    .cat-card { border-radius: 12px; margin-bottom: 10px; }
-    .cat-header { padding: 10px 12px; }
-    .cat-label { font-size: 12px; }
-    .cat-chips { padding: 10px 10px; gap: 6px; }
-
-    /* チップ（タップ領域を広く） */
-    .chip {
-      padding: 8px 14px; font-size: 12px;
-      min-height: 36px; display: inline-flex; align-items: center;
-    }
-
-    /* 出力エリア */
-    .output-block { border-radius: 10px; }
-    .output-header { padding: 8px 12px; }
-    .output-text { font-size: 11px; padding: 10px 12px; }
-    .copy-btn { font-size: 11px; padding: 5px 12px; }
-
-    /* カスタム入力 */
-    .custom-row { flex-direction: column; gap: 8px; }
-    .custom-input { font-size: 13px; }
-
-    /* 右下ボタン群 */
-    .refresh-btn { width: 36px; height: 36px; font-size: 14px; bottom: 16px; right: 12px; }
-    .theme-toggle { width: 36px; height: 36px; font-size: 16px; bottom: 58px; right: 12px; }
-
-    /* カテゴリ編集 */
-    .editor-grid { grid-template-columns: 1fr; }
-    .csv-toolbar { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
-    .backup-bar { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
-    .btn-csv-export, .btn-csv-import, .btn-backup, .btn-restore, .btn-reset-default { font-size: 11px; padding: 5px 10px; }
-
-    /* ヘルプ */
-    .help-grid { grid-template-columns: 1fr; }
-    .shortcut-table td { font-size: 11px; }
-
-    /* オンボーディングモーダル */
-    .modal-box { border-radius: 16px; }
-    .modal-hero { padding: 24px 20px 18px; }
-    .modal-body { padding: 16px 20px 20px; }
-    .modal-feature { padding: 10px 12px; }
-    .btn-start { font-size: 14px; padding: 13px; }
-
-    /* プリセット制限表示 */
-    .preset-limit-info { font-size: 10px; }
-  }
   /* ── EMPHASIS MODE BAR ── */
   .mode-bar {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    position: fixed; bottom: 20px; left: calc(30% - 80px); transform: translateX(-50%);
     z-index: 100;
     display: flex; align-items: stretch; gap: 0;
     background: var(--surface);
@@ -750,32 +629,251 @@
     font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
     letter-spacing: .5px;
   }
-  /* ── CUSTOM TOOLTIP ── */
-  .chip-tooltip {
-    position: fixed; z-index: 9999;
-    background: var(--ink, #1e2a4a);
-    color: #fff;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; line-height: 1.5;
-    padding: 6px 10px; border-radius: 8px;
-    max-width: 280px; word-break: break-all;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    pointer-events: none;
-    opacity: 0; transition: opacity .15s;
+
+  /* ── MOBILE OPTIMIZATION ── */
+  @media (max-width: 640px) {
+
+    /* ヘッダー */
+    header { padding: 16px 16px 12px; }
+    header h1 { font-size: 17px; letter-spacing: .5px; }
+    header p { font-size: 10px; }
+    .version-badge { font-size: 9px; padding: 2px 7px; }
+
+    /* タブ */
+    .tabs { padding: 0 8px; overflow-x: auto; scrollbar-width: none; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { padding: 10px 12px; font-size: 11px; }
+
+    /* 検索バー */
+    .search-bar-wrap { padding: 8px 12px; }
+    .search-bar { font-size: 13px; padding: 10px 14px 10px 36px; }
+
+    /* ビュー */
+    .view { padding: 14px 12px 100px; } /* 下部モードバー分の余白 */
+
+    /* プリセットボタン */
+    .preset-btn { font-size: 11px; padding: 6px 12px; }
+
+    /* カテゴリカード */
+    .cat-card { border-radius: 12px; margin-bottom: 10px; }
+    .cat-header { padding: 10px 12px; }
+    .cat-label { font-size: 12px; }
+    .cat-chips { padding: 10px 10px; gap: 6px; }
+
+    /* チップ（タップ領域を広く） */
+    .chip {
+      padding: 8px 14px; font-size: 12px;
+      min-height: 36px; display: inline-flex; align-items: center;
+    }
+
+    /* 出力エリア */
+    .output-block { border-radius: 10px; }
+    .output-header { padding: 8px 12px; }
+    .output-text { font-size: 11px; padding: 10px 12px; }
+    .copy-btn { font-size: 11px; padding: 5px 12px; }
+
+    /* カスタム入力 */
+    .custom-row { flex-direction: column; gap: 8px; }
+    .custom-input { font-size: 13px; }
+
+    /* モードバー（スマホ向けに最適化） */
+    .mode-bar {
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 999px;
+    }
+    .mode-btn { padding: 8px 14px; }
+    .mode-label { font-size: 11px; }
+    .mode-key { font-size: 8px; }
+
+    /* 右下ボタン群 */
+    .refresh-btn { width: 36px; height: 36px; font-size: 14px; bottom: 16px; right: 12px; }
+    .theme-toggle { width: 36px; height: 36px; font-size: 16px; bottom: 58px; right: 12px; }
+
+    /* カテゴリ編集 */
+    .editor-grid { grid-template-columns: 1fr; }
+    .csv-toolbar { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
+    .backup-bar { flex-wrap: wrap; gap: 6px; padding: 8px 12px; }
+    .btn-csv-export, .btn-csv-import, .btn-backup, .btn-restore, .btn-reset-default { font-size: 11px; padding: 5px 10px; }
+
+    /* ヘルプ */
+    .help-grid { grid-template-columns: 1fr; }
+    .shortcut-table td { font-size: 11px; }
+
+    /* オンボーディングモーダル */
+    .modal-box { border-radius: 16px; }
+    .modal-hero { padding: 24px 20px 18px; }
+    .modal-body { padding: 16px 20px 20px; }
+    .modal-feature { padding: 10px 12px; }
+    .btn-start { font-size: 14px; padding: 13px; }
   }
-  .chip-tooltip.visible { opacity: 1; }
-  .chip-tooltip::before {
-    content: 'EN:';
-    display: block; font-size: 9px; font-weight: 700;
-    color: rgba(255,255,255,.45); letter-spacing: 1px;
-    margin-bottom: 2px;
+
+  /* ── SPLIT LAYOUT (PC) ── */
+  .builder-split {
+    display: grid;
+    grid-template-columns: 6fr 4fr;
+    gap: 0;
+    height: calc(100vh - 120px);
+    overflow: hidden;
   }
+  .builder-left {
+    overflow-y: auto;
+    padding: 16px 20px 120px;
+    border-right: 1px solid var(--border);
+  }
+  .builder-right {
+    overflow-y: auto;
+    padding: 16px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+  }
+
+  /* モデル選択 */
+  .model-select-wrap {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .model-select-label {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .model-select {
+    width: 100%; padding: 8px 12px; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 13px; font-weight: 700;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    cursor: pointer; outline: none;
+    transition: border-color .2s;
+  }
+  .model-select:focus { border-color: var(--accent2); }
+
+  /* ベースプロンプト表示 */
+  .base-prompt-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .base-prompt-hd {
+    padding: 6px 12px; font-size: 10px; font-weight: 700;
+    color: var(--muted); background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .base-prompt-text {
+    padding: 8px 12px; font-size: 10px; line-height: 1.7;
+    font-family: 'JetBrains Mono', monospace; color: var(--muted);
+    word-break: break-all;
+  }
+
+  /* 右ペインの出力エリア */
+  .right-output-area { display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .right-output-empty {
+    text-align: center; color: var(--muted); font-size: 12px;
+    padding: 40px 20px;
+    border: 2px dashed var(--border); border-radius: 12px;
+  }
+
+  /* スマホでは1カラムに戻す */
+  @media (max-width: 900px) {
+    .builder-split { grid-template-columns: 1fr; height: auto; overflow: visible; }
+    .builder-left { padding: 14px 12px 120px; border-right: none; border-bottom: 1px solid var(--border); }
+    .builder-right { padding: 14px 12px 80px; }
+  }
+
+  /* ── LAYOUT TOGGLE BTN ── */
+  .layout-toggle-btn {
+    position: fixed; bottom: 120px; right: 20px; z-index: 100;
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .2s, box-shadow .2s;
+    font-family: sans-serif;
+  }
+  .layout-toggle-btn:hover { transform: scale(1.1); box-shadow: 0 6px 18px rgba(0,0,0,0.14); }
+
+  /* ── MEMO AREA ── */
+  .memo-wrap {
+    margin-top: 12px; border-radius: 10px;
+    border: 1.5px solid var(--border);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .memo-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; user-select: none;
+  }
+  .memo-header-label {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .memo-toggle-icon { font-size: 10px; color: var(--muted); transition: transform .2s; }
+  .memo-toggle-icon.open { transform: rotate(180deg); }
+  .memo-body { display: none; }
+  .memo-body.open { display: block; }
+  .memo-textarea {
+    width: 100%; min-height: 120px; padding: 10px 12px;
+    border: none; background: transparent;
+    color: var(--text); font-size: 12px; line-height: 1.7;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    resize: vertical; outline: none; box-sizing: border-box;
+  }
+  .memo-textarea::placeholder { color: var(--muted); }
+
+  @media (max-width: 640px) {
+    .layout-toggle-btn { display: none; } /* スマホでは非表示 */
+  }
+
+  /* ── FREE VERSION BANNER ── */
+  .free-banner {
+    background: linear-gradient(90deg, rgba(14,165,233,.06), rgba(99,102,241,.06));
+    border-bottom: 1px solid var(--border);
+    padding: 8px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .free-banner-left {
+    display: flex; align-items: center; gap: 12px; font-size: 12px;
+  }
+  .free-banner-label { font-weight: 700; color: var(--muted); }
+  .free-limit-bar {
+    display: flex; align-items: center; gap: 8px; font-size: 12px;
+  }
+  .free-limit-track {
+    width: 80px; height: 5px; border-radius: 999px;
+    background: var(--border); overflow: hidden;
+  }
+  .free-limit-fill {
+    height: 100%; border-radius: 999px;
+    background: var(--accent2);
+    transition: width .3s;
+  }
+  .free-limit-fill.warning { background: #f59e0b; }
+  .free-limit-fill.full { background: #ef4444; }
+  .btn-upgrade {
+    padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 700;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    color: #fff; border: none; cursor: pointer;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    text-decoration: none; display: inline-block;
+  }
+  .btn-upgrade:hover { opacity: .9; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>📖 呪文帳 Craft <span class="version-badge">無料版</span></h1>
+  <h1>📖 呪文帳 Craft <span class="version-badge" style="background:rgba(99,102,241,.1);color:var(--accent2);border:1px solid rgba(99,102,241,.2)">無料版</span></h1>
   <p>タグを選ぶだけで、英語プロンプト完成。カスタムタグは20個まで追加できます。</p>
   <div class="header-stats" id="header-stats" style="display:none">
     <span id="stat-cats" class="header-stat-chip has-sel"></span>
@@ -783,19 +881,7 @@
   </div>
 </header>
 
-<!-- ═══ FREE VERSION BANNER ═══ -->
-<div class="free-banner" id="free-banner">
-  <div class="free-banner-text">
-    <span>🆓 無料版</span>
-    <strong>カスタムタグ残り <span id="free-limit-count">20</span> 個</strong>
-  </div>
-  <div class="free-limit-bar">
-    <div class="free-limit-track">
-      <div class="free-limit-fill" id="free-limit-fill" style="width:0%"></div>
-    </div>
-    <a class="btn-upgrade" href="https://spell-craft.booth.pm/items/8485120" target="_blank">フル版を購入 ¥1,200</a>
-  </div>
-</div>
+<!-- ═══ ONBOARDING MODAL ═══ -->
 <div class="modal-overlay" id="onboarding-modal" style="display:none">
   <div class="modal-box">
     <div class="modal-hero">
@@ -854,11 +940,6 @@
   <div class="tab" data-tab="help">❓ ヘルプ</div>
 </div>
 
-<!-- 検索バー（ビルダータブ専用） -->
-<div class="search-bar-wrap" id="search-bar-wrap">
-  <input class="search-bar" id="tag-search" placeholder="🔍 タグを検索… 例: アニメ、夕暮れ、全身" oninput="filterTags(this.value)">
-</div>
-
 <!-- ダークモード切り替え -->
 <div class="mode-bar" id="mode-bar">
   <button class="mode-btn active" id="mode-normal" onclick="setEmphasisMode(1.0)">
@@ -874,32 +955,78 @@
     <span class="mode-key">ctrl</span>
   </button>
 </div>
+<button class="layout-toggle-btn" id="layout-toggle-btn" onclick="toggleLayout()" title="レイアウト切り替え">⬜</button>
 <button class="refresh-btn" onclick="refreshBuilder()" title="プロンプト表示をリフレッシュ">🔄</button>
-<div class="locked-feature" style="position:fixed;bottom:24px;right:20px;z-index:100;" title="有料版のみ">
-  <button class="theme-toggle" style="cursor:not-allowed">🔒</button>
-</div>
+<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="ダーク/ライト切り替え">🌙</button>
 
 <!-- ═══════════════════════════════════════════
      TAB 1: BUILDER
 ═══════════════════════════════════════════ -->
-<div class="view active" id="view-builder">
+<div id="view-builder-outer" class="view-builder-outer view active">
+  <div class="builder-split" id="builder-split">
 
-  <div class="presets-row" id="presets-row"></div>
+    <!-- 左：タグ選択エリア -->
+    <div class="builder-left">
+      <!-- 検索バー -->
+      <div class="search-bar-wrap" id="search-bar-wrap" style="margin-bottom:12px;padding:0">
+        <input class="search-bar" id="tag-search" placeholder="🔍 タグを検索… 例: アニメ、夕暮れ、全身" oninput="filterTags(this.value)">
+      </div>
+      <div class="presets-row" id="presets-row"></div>
+      <div id="cats-container"></div>
+    </div>
 
-  <div id="cats-container"></div>
+    <!-- 右：モデル選択＋プロンプト出力 -->
+    <div class="builder-right">
 
-  <!-- custom -->
-  <div style="margin-bottom:20px">
-    <div class="field-label" style="margin-bottom:8px">✏️ 追加のプロンプト（自由入力）</div>
-    <input class="custom-input" id="custom-pos" placeholder="例: wearing red dress, long hair...">
-  </div>
-  <div style="margin-bottom:24px">
-    <div class="field-label" style="margin-bottom:8px">🚫 追加のネガティブプロンプト（自由入力）</div>
-    <input class="custom-input" id="custom-neg" placeholder="例: bad anatomy, blurry...">
-  </div>
+      <!-- モデル選択 -->
+      <div class="model-select-wrap">
+        <div class="model-select-label">🤖 モデル</div>
+        <select class="model-select" id="model-select" onchange="onModelChange()">
+          <option value="none">なし（ベースなし）</option>
+          <option value="pony">Pony Diffusion</option>
+          <option value="illustrious">Illustrious / Animagine</option>
+          <option value="sdxl">SDXL 汎用</option>
+          <option value="sd15">SD 1.5 汎用</option>
+          <option value="novelai">NovelAI</option>
+          <option value="flux">FLUX</option>
+        </select>
+      </div>
 
-  <div class="output-area" id="output-area">
-    <div class="output-empty">⬆️ 上の項目を選ぶとここにプロンプトが表示されます</div>
+      <!-- ベースプロンプト表示 -->
+      <div class="base-prompt-wrap" id="base-prompt-wrap" style="display:none">
+        <div class="base-prompt-hd">📌 ベースプロンプト（自動付与）</div>
+        <div class="base-prompt-text" id="base-prompt-pos"></div>
+        <div class="base-prompt-hd" style="border-top:1px solid var(--border)">🚫 ベースネガティブ（自動付与）</div>
+        <div class="base-prompt-text" id="base-prompt-neg"></div>
+      </div>
+
+      <!-- カスタム入力 -->
+      <div>
+        <div class="field-label" style="margin-bottom:6px;font-size:11px">✏️ 追加プロンプト</div>
+        <input class="custom-input" id="custom-pos" placeholder="例: wearing red dress...">
+      </div>
+      <div>
+        <div class="field-label" style="margin-bottom:6px;font-size:11px">🚫 追加ネガティブ</div>
+        <input class="custom-input" id="custom-neg" placeholder="例: bad anatomy...">
+      </div>
+
+      <!-- プロンプト出力 -->
+      <div class="right-output-area" id="output-area">
+        <div class="right-output-empty">⬆️ 左のタグを選ぶとここにプロンプトが表示されます</div>
+      </div>
+
+      <!-- メモ欄 -->
+      <div class="memo-wrap" id="memo-wrap">
+        <div class="memo-header" onclick="toggleMemo()">
+          <span class="memo-header-label">📝 メモ（プロンプトに影響しません）</span>
+          <span class="memo-toggle-icon" id="memo-toggle-icon">▲</span>
+        </div>
+        <div class="memo-body" id="memo-body">
+          <textarea class="memo-textarea" id="memo-textarea" placeholder="一時メモ、プロンプトの控え、生成設定など自由にどうぞ..."></textarea>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
@@ -909,30 +1036,17 @@
 <div class="view" id="view-editor">
   <div class="csv-toolbar">
     <span>💾 CSV管理</span>
-    <div class="locked-row">
-      <div class="locked-feature">
-        <button class="btn-csv-export">⬇️ CSVで書き出し</button>
-      </div>
-      <div class="locked-feature">
-        <button class="btn-csv-import">⬆️ CSVから読み込み</button>
-      </div>
-      <span class="locked-badge">🔒 有料版のみ</span>
-      <a href="https://spell-craft.booth.pm/items/8485120" target="_blank" class="btn-upgrade" style="font-size:11px;padding:4px 12px">フル版で使う</a>
-    </div>
+    <button class="btn-csv-export" onclick="exportCSV()">⬇️ CSVで書き出し</button>
+    <button class="btn-csv-import" onclick="document.getElementById('csv-file-input').click()">⬆️ CSVから読み込み</button>
+    <input type="file" id="csv-file-input" accept=".csv" onchange="importCSV(this)">
+    <span class="info-tip" style="margin-left:4px">タグやカテゴリをCSVで管理・バックアップできます</span>
   </div>
   <div class="backup-bar">
     <span>🗂 全データ</span>
-    <div class="locked-row">
-      <div class="locked-feature">
-        <button class="btn-backup">📦 JSONバックアップ</button>
-      </div>
-      <div class="locked-feature">
-        <button class="btn-restore">📂 JSONから復元</button>
-      </div>
-      <span class="locked-badge">🔒 有料版のみ</span>
-      <a href="https://spell-craft.booth.pm/items/8485120" target="_blank" class="btn-upgrade" style="font-size:11px;padding:4px 12px">フル版で使う</a>
-    </div>
-    <button class="btn-reset-default" onclick="resetToDefault()">🔄 タグをデフォルトに戻す</button>
+    <button class="btn-backup" onclick="exportJSON()">📦 JSONバックアップ</button>
+    <button class="btn-restore" onclick="document.getElementById('restore-file-input').click()">📂 JSONから復元</button>
+    <input type="file" id="restore-file-input" accept=".json" onchange="importJSON(this)">
+    <span class="info-tip" style="margin-left:4px">カテゴリ・プリセット・設定をまとめてバックアップ</span>
   </div>
   <div class="editor-grid" style="margin-top:14px">
     <div>
@@ -951,11 +1065,10 @@
      TAB 3: PRESET EDITOR
 ═══════════════════════════════════════════ -->
 <div class="view" id="view-presets">
-  <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <div style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
     <button class="action-btn btn-teal" onclick="addPreset()">＋ プリセット追加</button>
     <span class="info-tip">現在の選択状態をスナップショットして保存できます</span>
   </div>
-  <div class="preset-limit-info">プリセット残り <span id="preset-limit-count">3</span> 個（無料版は3個まで）　<a href="https://spell-craft.booth.pm/items/8485120" target="_blank" style="color:var(--accent);font-weight:700;font-size:11px">フル版で無制限に →</a></div>
   <div class="preset-editor-list" id="preset-editor-list"></div>
 </div>
 
@@ -965,7 +1078,7 @@
 <div class="view" id="view-help">
 
   <div class="help-version-banner">
-    <div class="vb-left">📖 呪文帳 Craft <span class="version-badge" style="font-size:11px">v1.0.0</span></div>
+    <div class="vb-left">📖 呪文帳 Craft <span class="version-badge" style="font-size:11px">v1.1.0</span></div>
     <div class="vb-right">ご購入ありがとうございます 🎉</div>
   </div>
 
@@ -1156,8 +1269,8 @@
 // ─────────────────────────────────────────────────────
 const COLORS = ["#5eead4","#818cf8","#f472b6","#fb923c","#facc15","#34d399","#60a5fa","#c084fc","#f87171","#a3e635"];
 
-// デフォルトカテゴリ（リセット用）
-const defaultCategories = [
+let data = {
+  categories: [
     { id:"quality", label:"✨ クオリティ", color:"#34d399", single:false, negative:false, options:[{ja:"高品質",en:"masterpiece, best quality"},{ja:"超高解像度",en:"ultra-detailed, 8k uhd"},{ja:"4K",en:"4k, 4k resolution"},{ja:"美しい照明",en:"beautiful lighting, cinematic lighting"},{ja:"鮮明な輪郭",en:"sharp focus, crisp lines"},{ja:"映画的",en:"cinematic, film grain"},{ja:"プロ撮影",en:"professional photography, DSLR"},{ja:"賞受賞レベル",en:"award winning art, trending on artstation"},{ja:"被写界深度",en:"depth of field, bokeh background"},{ja:"繊細な髪の毛",en:"detailed hair strands, light reflections"},{ja:"なめらかな肌",en:"smooth skin"},{ja:"ソフトシェーディング",en:"soft shading"}] },
     { id:"subject", label:"🎨 被写体", color:"#f472b6", single:false, negative:false, options:[{ja:"女性",en:"1girl"},{ja:"男性",en:"1boy"},{ja:"少女",en:"1girl, young"},{ja:"複数の女性",en:"2girls"},{ja:"カップル",en:"1boy, 1girl, couple"},{ja:"猫",en:"cat"},{ja:"犬",en:"dog"},{ja:"ドラゴン",en:"dragon"},{ja:"風景（人なし）",en:"scenery, no humans"},{ja:"建物・都市",en:"architecture, cityscape"},{ja:"花・植物",en:"flowers, plants, botanical"},{ja:"食べ物",en:"food, still life"},{ja:"乗り物",en:"vehicle"},{ja:"宇宙・惑星",en:"space, planets, cosmos"}] },
     { id:"style", label:"🖌️ スタイル", color:"#818cf8", single:true, negative:false, options:[{ja:"アニメ風",en:"anime style, anime screencap"},{ja:"リアル・写真",en:"photorealistic, hyperrealistic, 8k"},{ja:"水彩画",en:"watercolor painting, soft edges"},{ja:"油絵",en:"oil painting, impasto"},{ja:"マンガ風",en:"manga style, black and white lineart"},{ja:"ピクセルアート",en:"pixel art, 16bit"},{ja:"3DCG",en:"3d render, octane render, blender"},{ja:"スケッチ",en:"pencil sketch, hand drawn"},{ja:"サイバーパンク",en:"cyberpunk, neon lights, futuristic"},{ja:"ファンタジー",en:"fantasy art, magical, ethereal"},{ja:"ローポリ",en:"low poly, geometric, flat shading"},{ja:"水墨画",en:"ink wash painting, sumi-e, traditional"},{ja:"ステンドグラス",en:"stained glass, colorful mosaic"},{ja:"切り絵",en:"paper cut art, silhouette"},{ja:"パステルカラー",en:"pastel colors"},{ja:"エーテリアル",en:"ethereal atmosphere"}] },
@@ -1177,22 +1290,19 @@ const defaultCategories = [
     { id:"action", label:"⚡ 行動", color:"#4ade80", single:false, negative:false, options:[{ja:"本を読む",en:"reading book"},{ja:"音楽を聴く",en:"listening to music, headphones"},{ja:"スマホを見る",en:"looking at phone, smartphone"},{ja:"食べる",en:"eating food"},{ja:"飲む",en:"drinking, holding cup"},{ja:"歌う",en:"singing, microphone"},{ja:"踊る",en:"dancing"},{ja:"戦う",en:"fighting, battle, action"},{ja:"魔法を使う",en:"casting magic, spell, glowing hands"},{ja:"手を振る",en:"waving hand, greeting"},{ja:"指差し",en:"pointing finger"},{ja:"抱きしめる",en:"hugging, embracing"},{ja:"花を持つ",en:"holding flowers, bouquet"},{ja:"傘を差す",en:"holding umbrella"},{ja:"楽器を弾く",en:"playing instrument"},{ja:"絵を描く",en:"drawing, painting, art"},{ja:"料理する",en:"cooking, kitchen"},{ja:"走る",en:"running, sprinting"},{ja:"泳ぐ",en:"swimming"},{ja:"眠る",en:"sleeping, asleep"}] },
     { id:"impression", label:"🌟 雰囲気・印象", color:"#fbbf24", single:false, negative:false, options:[{ja:"キュート・無邪気",en:"cute, innocent"},{ja:"エレガント",en:"elegant"},{ja:"エーテリアル",en:"ethereal atmosphere"},{ja:"パステル",en:"pastel colors"},{ja:"ソフトシェーディング",en:"soft shading"},{ja:"白い肌",en:"pale skin"},{ja:"繊細な顔立ち",en:"delicate face, small nose"},{ja:"なめらかな肌",en:"smooth skin"},{ja:"繊細な髪の毛",en:"detailed hair strands, light reflections"},{ja:"神秘的",en:"mysterious, mystical"},{ja:"ドリーミー",en:"dreamy, soft focus"},{ja:"ロマンティック",en:"romantic, tender"},{ja:"メランコリック",en:"melancholic, wistful"},{ja:"ノスタルジック",en:"nostalgic, retro feeling"}] },
     { id:"negative", label:"🚫 ネガティブ", color:"#f87171", single:false, negative:true, options:[{ja:"ぼやけ・低画質",en:"blurry, low quality, bad anatomy, worst quality"},{ja:"変な手・指",en:"bad hands, extra fingers, deformed hands, missing fingers"},{ja:"余分な手足",en:"extra limbs, mutated, deformed body"},{ja:"文字・透かし",en:"text, watermark, signature, username"},{ja:"変な顔",en:"bad face, ugly, deformed face, cross-eyed"},{ja:"モノクロ",en:"grayscale, monochrome"},{ja:"フレームアウト",en:"cropped, out of frame, cut off"},{ja:"AI特有のアーティファクト",en:"jpeg artifacts, noise, grain, pixelated"}] }
-];
-
-let data = {
-  categories: JSON.parse(JSON.stringify(defaultCategories)),
+  ],
   presets: [
     { id:"p1", label:"🌸 黄金時間の制服少女", selections:{ quality:["masterpiece, best quality","ultra-detailed, 8k uhd","beautiful lighting, cinematic lighting"], subject:["1girl"], style:["anime style, anime screencap"], hair_style:["long hair","silky hair, smooth hair"], hair_color:["brown hair"], eyes:["blue eyes","large eyes, big eyes"], expression:["shy smile, embarrassed smile"], gaze:["looking at viewer"], outfit:["blazer, school uniform"], pose:["leaning against wall"], composition:["upper body, bust shot"], mood:["golden hour, sunset, warm colors"], location:["rooftop, school roof"], impression:["cute, innocent","pale skin"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } },
     { id:"p2", label:"🌙 夜桜の和風美少女", selections:{ quality:["masterpiece, best quality","cinematic, film grain","depth of field, bokeh background"], subject:["1girl"], style:["anime style, anime screencap"], hair_style:["long hair","glossy hair, shiny hair"], hair_color:["black hair"], eyes:["purple eyes","watery eyes, glistening eyes"], expression:["serious expression, determined"], gaze:["looking away, into the distance"], outfit:["kimono, japanese clothes"], accessory:["flower hair ornament, floral"], composition:["full body shot"], mood:["night, dark atmosphere, moonlight"], background:["petals falling, flower petals"], location:["japanese shrine, torii gate"], impression:["elegant","mysterious, mystical","melancholic, wistful"], negative:["blurry, low quality, bad anatomy, worst quality","bad hands, extra fingers, deformed hands, missing fingers","text, watermark, signature, username"] } }
   ]
 };
 
-let builderSel = {}; // { catId: [en, ...] }
+let builderSel = {}; // { catId: [{en, weight}] } weight: 1.0=通常, 1.2=強調, 1.4=強強調
 let editingCatId = null;
 
 function save() {
   try {
-    localStorage.setItem('jc_craft_data', JSON.stringify(data));
+    localStorage.setItem('jc_free_data', JSON.stringify(data));
   } catch(e) {
     showToast('⚠️ 保存に失敗しました（ストレージ容量不足の可能性）');
   }
@@ -1201,7 +1311,7 @@ function save() {
 // データ読み込み時のエラー耐性
 (function() {
   try {
-    const raw = localStorage.getItem('jc_craft_data');
+    const raw = localStorage.getItem('jc_free_data');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.categories && parsed.presets) {
@@ -1211,7 +1321,7 @@ function save() {
       }
     }
   } catch(e) {
-    localStorage.removeItem('jc_craft_data');
+    localStorage.removeItem('jc_free_data');
     showToastDelayed('⚠️ 保存データが破損していたためリセットしました');
   }
 })();
@@ -1226,9 +1336,14 @@ document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+    const outer = document.getElementById('view-builder-outer');
+    if (outer) outer.classList.remove('active');
     t.classList.add('active');
-    document.getElementById('view-' + t.dataset.tab).classList.add('active');
-    // 検索バーはビルダータブのみ表示
+    if (t.dataset.tab === 'builder') {
+      if (outer) outer.classList.add('active');
+    } else {
+      document.getElementById('view-' + t.dataset.tab).classList.add('active');
+    }
     const isBuilder = t.dataset.tab === 'builder';
     document.getElementById('search-bar-wrap').style.display = isBuilder ? '' : 'none';
     if (!isBuilder) { document.getElementById('tag-search').value = ''; filterTags(''); }
@@ -1262,7 +1377,7 @@ function renderBuilder() {
   const cc = document.getElementById('cats-container');
   cc.innerHTML = '';
   data.categories.forEach(cat => {
-    const sel = builderSel[cat.id] || [];
+    const sel = builderSel[cat.id] || []; // [{en, weight}]
     const card = document.createElement('div'); card.className = 'cat-card';
     card.style.borderColor = sel.length ? cat.color+'44' : '';
 
@@ -1275,15 +1390,25 @@ function renderBuilder() {
     const chips = document.createElement('div'); chips.className = 'cat-chips';
     cat.options.forEach(opt => {
       const c = document.createElement('button'); c.className = 'chip';
-      if (sel.includes(opt.en)) {
-        c.classList.add('selected');
+      const selItem = sel.find(x => x.en === opt.en);
+      if (selItem) {
+        const w = selItem.weight;
+        if (w >= 1.4) {
+          c.classList.add('selected-strong');
+        } else if (w >= 1.2) {
+          c.classList.add('selected-em');
+        } else {
+          c.classList.add('selected');
+        }
         c.style.borderColor = cat.color;
-        c.style.background = cat.color + '22';
+        c.style.background = cat.color + (w >= 1.4 ? '44' : w >= 1.2 ? '33' : '22');
         c.style.color = cat.color;
       }
       c.textContent = opt.ja;
-      c.title = opt.en;
-      c.onclick = () => toggleChip(cat.id, opt.en, cat.single);
+      c.title = ''; // カスタムツールチップを使うのでデフォルトtitleは無効化
+      c.addEventListener('mouseenter', () => showTooltip(c, opt.en));
+      c.addEventListener('mouseleave', hideTooltip);
+      c.addEventListener('click', (e) => { hideTooltip(); toggleChip(cat.id, opt.en, cat.single, e); });
       chips.appendChild(c);
     });
     card.appendChild(header); card.appendChild(chips);
@@ -1293,7 +1418,7 @@ function renderBuilder() {
   renderOutput();
 }
 
-let emphasisMode = 1.0;
+let emphasisMode = 1.0; // 現在の強調モード
 
 function setEmphasisMode(w) {
   emphasisMode = w;
@@ -1308,10 +1433,39 @@ function toggleChip(catId, en, single, e) {
   if (!en || en.trim() === '') return;
   if (!builderSel[catId]) builderSel[catId] = [];
   const arr = builderSel[catId];
-  if (single) {
-    builderSel[catId] = arr.includes(en) ? [] : [en];
+  const idx = arr.findIndex(x => x.en === en);
+  const isShift = e && e.shiftKey;
+  const isCtrl = e && (e.ctrlKey || e.metaKey);
+
+  if (idx >= 0) {
+    // 選択済みの場合
+    if (isShift) {
+      // Shift: 強調を循環（通常→1.2→1.4→解除）
+      const w = arr[idx].weight;
+      if (w < 1.2) {
+        arr[idx] = { en, weight: 1.2 };
+      } else if (w < 1.4) {
+        arr[idx] = { en, weight: 1.4 };
+      } else {
+        arr.splice(idx, 1);
+      }
+    } else {
+      // 通常クリック: 解除
+      if (single) {
+        builderSel[catId] = [];
+      } else {
+        arr.splice(idx, 1);
+      }
+    }
   } else {
-    builderSel[catId] = arr.includes(en) ? arr.filter(x=>x!==en) : [...arr, en];
+    // 未選択の場合
+    // キーボード優先、なければモードバーの設定を使用
+    const weight = isCtrl ? 1.4 : isShift ? 1.2 : emphasisMode;
+    if (single) {
+      builderSel[catId] = [{ en, weight }];
+    } else {
+      arr.push({ en, weight });
+    }
   }
   renderBuilder();
 }
@@ -1320,36 +1474,48 @@ function renderOutput() {
   // builderSelに残っている古い・無効な選択値を完全にクリーンアップ
   const validEnSets = {};
   data.categories.forEach(c => {
-    // 空文字のenを持つオプションは除外
     validEnSets[c.id] = new Set(c.options.map(o => o.en).filter(en => en && en.trim() !== ''));
   });
   Object.keys(builderSel).forEach(catId => {
     if (!validEnSets[catId]) {
       delete builderSel[catId];
     } else {
-      builderSel[catId] = builderSel[catId].filter(en => en && en.trim() !== '' && validEnSets[catId].has(en));
+      // 後方互換: 文字列のままのデータをオブジェクトに変換
+      builderSel[catId] = builderSel[catId].map(item =>
+        typeof item === 'string' ? { en: item, weight: 1.0 } : item
+      ).filter(item => item.en && item.en.trim() !== '' && validEnSets[catId].has(item.en));
     }
-    // 空配列になったキーも削除
     if (builderSel[catId] && builderSel[catId].length === 0) {
       delete builderSel[catId];
     }
   });
 
+  // weightに応じて(en:weight)形式で出力
+  function formatTag(item) {
+    const en = typeof item === 'string' ? item : item.en;
+    const w = typeof item === 'string' ? 1.0 : (item.weight || 1.0);
+    return w !== 1.0 ? `(${en}:${w})` : en;
+  }
+
   const posCategories = data.categories.filter(c => !c.negative);
   const negCategories = data.categories.filter(c => c.negative);
-  const posParts = posCategories.flatMap(c => builderSel[c.id] || []);
+  const posParts = posCategories.flatMap(c => (builderSel[c.id] || []).map(formatTag));
   const customPos = document.getElementById('custom-pos').value.trim();
   if (customPos) posParts.push(customPos);
-  const negParts = negCategories.flatMap(c => builderSel[c.id] || []);
+  const negParts = negCategories.flatMap(c => (builderSel[c.id] || []).map(formatTag));
   const customNeg = document.getElementById('custom-neg').value.trim();
   if (customNeg) negParts.push(customNeg);
 
-  const posPrompt = posParts.join(', ');
-  const negPrompt = negParts.join(', ');
+  // モデルベースプロンプトを先頭に付与
+  const modelSel = document.getElementById('model-select');
+  const model = modelSel ? modelSel.value : 'none';
+  const basePreset = MODEL_PRESETS[model] || { pos: '', neg: '' };
+  const posPrompt = [basePreset.pos, posParts.join(', ')].filter(Boolean).join(', ');
+  const negPrompt = [basePreset.neg, negParts.join(', ')].filter(Boolean).join(', ');
   const oa = document.getElementById('output-area');
 
   if (!posPrompt && !negPrompt) {
-    oa.innerHTML = '<div class="output-empty">⬆️ 上の項目を選ぶとここにプロンプトが表示されます</div>';
+    oa.innerHTML = '<div class="right-output-empty">⬆️ 左のタグを選ぶとここにプロンプトが表示されます</div>';
     return;
   }
   oa.innerHTML = '';
@@ -1383,8 +1549,6 @@ function makeOutputBlock(label, text, cls, color) {
   btn.addEventListener('click', () => {
     navigator.clipboard.writeText(text).then(() => {
       btn.classList.add('done'); btn.textContent = '✓ コピー済み！';
-      // GA イベント計測
-      gtag('event', 'prompt_copied', { event_category: 'engagement', event_label: cls });
       const tid = setTimeout(() => {
         if (btn.isConnected) { btn.classList.remove('done'); btn.textContent = '📋 コピー'; }
         clearTimeout(tid);
@@ -1484,23 +1648,18 @@ function renderEditPanel() {
       <span></span>
     </div>
     <div class="options-list" id="options-list">
-      ${cat.options.map((o,i)=>{
-        const isDefault = i < getDefaultOptCount(cat.id);
-        return `
+      ${cat.options.map((o,i)=>`
         <div class="option-row" draggable="true" data-oi="${i}">
           <span class="opt-drag-handle" title="ドラッグで並び替え">⠿</span>
-          <input value="${escH(o.ja)}" oninput="setOptJa(${i},this.value)" placeholder="日本語" ${isDefault?'readonly style="opacity:.6"':''}>
-          <input value="${escH(o.en)}" oninput="setOptEn(${i},this.value)" placeholder="英語プロンプト" style="font-family:'JetBrains Mono',monospace;font-size:11px${isDefault?';opacity:.6':''}" ${isDefault?'readonly':''}>
-          ${isDefault ? '<span style="font-size:10px;color:var(--muted);text-align:center;width:28px" title="デフォルトタグは削除できません">🔒</span>' : `<button class="del-btn" onclick="delOpt(${i})">×</button>`}
-        </div>`;
-      }).join('')}
+          <input value="${escH(o.ja)}" oninput="setOptJa(${i},this.value)" placeholder="日本語">
+          <input value="${escH(o.en)}" oninput="setOptEn(${i},this.value)" placeholder="英語プロンプト" style="font-family:'JetBrains Mono',monospace;font-size:11px">
+          <button class="del-btn" onclick="delOpt(${i})">×</button>
+        </div>
+      `).join('')}
     </div>
     <div class="action-row">
       <button class="action-btn btn-teal" onclick="addOpt()">＋ 選択肢追加</button>
-      ${isDefaultCat(cat.id)
-        ? '<button class="action-btn" style="opacity:.4;cursor:not-allowed" title="デフォルトカテゴリは削除できません">🔒 カテゴリ削除</button>'
-        : '<button class="action-btn btn-red" onclick="deleteCat()">🗑 カテゴリ削除</button>'
-      }
+      <button class="action-btn btn-red" onclick="deleteCat()">🗑 カテゴリ削除</button>
       <button class="btn-save" onclick="saveEdits()">✓ 保存して反映</button>
     </div>
     <p class="info-tip" style="margin-top:10px">保存するとビルダーに即反映されます</p>
@@ -1531,9 +1690,9 @@ function setOptEn(i,v) {
   }
 }
 function addOpt() {
-  if (isFreeLimitReached()) {
-    showToast('⚠️ 無料版のタグ上限（20個）に達しました。フル版にアップグレードしてください。');
-    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_tag' });
+  if (isTagLimitReached()) {
+    showToast('⚠️ カスタムタグは20個まで（無料版）。フル版で無制限に！');
+    gtag('event', 'free_limit_reached', {event_category:'upgrade', event_label:'add_tag'});
     return;
   }
   data.categories.find(c=>c.id===editingCatId).options.push({ja:'',en:''});
@@ -1548,26 +1707,14 @@ function delOpt(i) {
   if (builderSel[cat.id] && removedEn) {
     builderSel[cat.id] = builderSel[cat.id].filter(x => x !== removedEn);
   }
-  updateFreeLimitUI();
   renderEditPanel();
 }
-// デフォルトカテゴリIDを初回起動時に記録
-function isDefaultCat(catId) {
-  // カスタム追加カテゴリのIDは 'cat_' + タイムスタンプ形式
-  return !catId.startsWith('cat_');
-}
-
 function deleteCat() {
-  if (isDefaultCat(editingCatId)) {
-    showToast('⚠️ デフォルトカテゴリは削除できません');
-    return;
-  }
   if (!confirm('このカテゴリを削除しますか？')) return;
   data.categories = data.categories.filter(c=>c.id!==editingCatId);
   editingCatId = null; save(); renderEditorList();
   document.getElementById('edit-panel').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:30px 0;text-align:center">← 左のカテゴリを選択してください</div>';
   renderBuilder();
-  updateFreeLimitUI();
 }
 function bindOptDrag() {
   const rows = document.querySelectorAll('#options-list .option-row');
@@ -1613,13 +1760,11 @@ function saveEdits() {
     builderSel[cat.id] = [];
   }
   save(); renderEditorList(); renderBuilder();
-  updateFreeLimitUI();
   showToast('保存しました ✓');
 }
 function addCategory() {
-  if (isFreeLimitReached()) {
-    showToast('⚠️ 無料版のタグ上限（20個）に達しました。フル版にアップグレードしてください。');
-    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_category' });
+  if (isTagLimitReached()) {
+    showToast('⚠️ カスタムタグは20個まで（無料版）。フル版で無制限に！');
     return;
   }
   const id = 'cat_' + Date.now();
@@ -1651,22 +1796,15 @@ function renderPresetEditor() {
     list.appendChild(div);
   });
 }
-const FREE_PRESET_LIMIT = 3;
-
-function updatePresetLimitUI() {
-  const el = document.getElementById('preset-limit-count');
-  if (el) el.textContent = Math.max(0, FREE_PRESET_LIMIT - data.presets.length);
-}
-
 function addPreset() {
   if (data.presets.length >= FREE_PRESET_LIMIT) {
-    showToast('⚠️ 無料版はプリセット3個まで。フル版にアップグレードしてください。');
-    gtag('event', 'free_limit_reached', { event_category: 'upgrade', event_label: 'add_preset' });
+    showToast('⚠️ プリセットは3個まで（無料版）。フル版で無制限に！');
+    gtag('event', 'free_limit_reached', {event_category:'upgrade', event_label:'add_preset'});
     return;
   }
   data.presets.push({ id:'p'+Date.now(), label:'🆕 新しいプリセット', selections: JSON.parse(JSON.stringify(builderSel)) });
   save(); renderPresetEditor(); renderBuilder();
-  updatePresetLimitUI();
+  updateFreeLimitUI();
   showToast('現在の選択でプリセットを作成しました');
 }
 function deletePreset(i) {
@@ -1836,35 +1974,173 @@ function showToast(msg) {
   t._to = setTimeout(() => t.style.opacity = '0', 2000);
 }
 
-function resetToDefault() {
-  if (!confirm('タグをデフォルトに戻しますか？\n追加したカテゴリ・タグは削除されます。\nプリセットはそのまま残ります。')) return;
+// ─────────────────────────────────────────────────────
+// CHIP TOOLTIP
+// ─────────────────────────────────────────────────────
+let tooltip = null;
+let tooltipTimer = null;
 
-  // デフォルトのカテゴリ・タグに戻す
-  const defaultData = getDefaultData();
-  data.categories = defaultData.categories;
-
-  // builderSelもクリア
-  builderSel = {};
-
-  // localStorageのデフォルト数記録もリセット
-  localStorage.removeItem('jc_free_default_count');
-  data.categories.forEach(cat => {
-    localStorage.removeItem('jc_free_default_opts_' + cat.id);
-  });
-
-  save();
-  initFreeDefaults();
-  renderBuilder();
-  renderEditorList();
-  updateFreeLimitUI();
-  showToast('✓ タグをデフォルトに戻しました');
+function initTooltip() {
+  tooltip = document.createElement('div');
+  tooltip.className = 'chip-tooltip';
+  document.body.appendChild(tooltip);
 }
 
-function getDefaultData() {
-  // ハードコードされたデフォルトカテゴリを返す
-  return {
-    categories: defaultCategories
-  };
+function showTooltip(el, text) {
+  if (!tooltip) return;
+  clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(() => {
+    tooltip.textContent = text;
+    tooltip.classList.add('visible');
+    moveTooltip(el);
+  }, 600);
+}
+
+function moveTooltip(el) {
+  const rect = el.getBoundingClientRect();
+  const tw = 280;
+  let left = rect.left + rect.width / 2 - tw / 2;
+  let top = rect.bottom + 8;
+  // 画面外に出ないよう調整
+  if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+  if (left < 8) left = 8;
+  if (top + 60 > window.innerHeight) top = rect.top - 60;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+  tooltip.style.maxWidth = tw + 'px';
+}
+
+function hideTooltip() {
+  clearTimeout(tooltipTimer);
+  if (tooltip) tooltip.classList.remove('visible');
+}
+
+// ─────────────────────────────────────────────────────
+// MODEL BASE PROMPTS
+// ─────────────────────────────────────────────────────
+const MODEL_PRESETS = {
+  none:        { pos: '', neg: '' },
+  pony:        {
+    pos: 'score_9, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up',
+    neg: 'score_1, score_2, score_3, score_4, bad anatomy, worst quality, low quality, normal quality'
+  },
+  illustrious: {
+    pos: 'masterpiece, best quality, very aesthetic, absurdres',
+    neg: 'lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry'
+  },
+  sdxl:        {
+    pos: 'masterpiece, best quality, ultra-detailed',
+    neg: 'worst quality, low quality, bad anatomy, bad hands, text, watermark, signature'
+  },
+  sd15:        {
+    pos: 'masterpiece, best quality, highly detailed',
+    neg: 'worst quality, low quality, bad anatomy, bad hands, missing fingers, extra fingers, text, watermark, signature, blurry'
+  },
+  novelai:     {
+    pos: 'best quality, amazing quality, very aesthetic, absurdres',
+    neg: 'lowres, {bad}, error, fewer, extra, missing, worst quality, jpeg artifacts, bad quality, watermark, unfinished, displeasing, chromatic aberration, signature, extra digits, artistic error, username, scan, [abstract]'
+  },
+  flux:        {
+    pos: 'high quality, detailed, sharp focus',
+    neg: 'blurry, low quality, worst quality, bad anatomy, watermark, text'
+  }
+};
+
+function onModelChange() {
+  const model = document.getElementById('model-select').value;
+  const preset = MODEL_PRESETS[model];
+  const wrap = document.getElementById('base-prompt-wrap');
+  if (model === 'none') {
+    wrap.style.display = 'none';
+  } else {
+    wrap.style.display = '';
+    document.getElementById('base-prompt-pos').textContent = preset.pos || '（なし）';
+    document.getElementById('base-prompt-neg').textContent = preset.neg || '（なし）';
+  }
+  renderOutput();
+}
+
+// ─────────────────────────────────────────────────────
+// LAYOUT TOGGLE
+// ─────────────────────────────────────────────────────
+let isSplitLayout = true; // デフォルト2分割
+
+function toggleLayout() {
+  isSplitLayout = !isSplitLayout;
+  applyLayout();
+  localStorage.setItem('jc_layout', isSplitLayout ? 'split' : 'single');
+}
+
+function applyLayout() {
+  const split = document.getElementById('builder-split') || document.querySelector('.builder-split');
+  const btn = document.getElementById('layout-toggle-btn');
+  if (!split) return;
+  if (isSplitLayout) {
+    split.style.setProperty('display', 'grid', 'important');
+    split.style.setProperty('grid-template-columns', '6fr 4fr', 'important');
+    split.style.setProperty('height', 'calc(100vh - 120px)', 'important');
+    split.style.setProperty('overflow', 'hidden', 'important');
+    if (btn) { btn.textContent = '⬜'; btn.title = '通常レイアウトに切り替え'; }
+  } else {
+    split.style.setProperty('display', 'block', 'important');
+    split.style.setProperty('grid-template-columns', '1fr', 'important');
+    split.style.setProperty('height', 'auto', 'important');
+    split.style.setProperty('overflow', 'visible', 'important');
+    if (btn) { btn.textContent = '⬛'; btn.title = '2分割レイアウトに切り替え'; }
+  }
+}
+
+function initLayout() {
+  const saved = localStorage.getItem('jc_layout');
+  isSplitLayout = saved !== 'single';
+  applyLayout();
+}
+
+// ─────────────────────────────────────────────────────
+// MEMO
+// ─────────────────────────────────────────────────────
+function toggleMemo() {
+  const body = document.getElementById('memo-body');
+  const icon = document.getElementById('memo-toggle-icon');
+  const isOpen = body.classList.toggle('open');
+  icon.classList.toggle('open', isOpen);
+  localStorage.setItem('jc_memo_open', isOpen ? '1' : '0');
+}
+
+function initMemo() {
+  // メモ内容を復元
+  const saved = localStorage.getItem('jc_memo_text');
+  if (saved) document.getElementById('memo-textarea').value = saved;
+  // 開閉状態を復元
+  if (localStorage.getItem('jc_memo_open') === '1') {
+    document.getElementById('memo-body').classList.add('open');
+    document.getElementById('memo-toggle-icon').classList.add('open');
+  }
+  // 入力時に自動保存
+  document.getElementById('memo-textarea').addEventListener('input', (e) => {
+    localStorage.setItem('jc_memo_text', e.target.value);
+  });
+}
+
+// ─────────────────────────────────────────────────────
+// REFRESH
+// ─────────────────────────────────────────────────────
+function refreshBuilder() {
+  // builderSelを現在のcategoriesに存在するタグだけに絞り込んでから再描画
+  const validEnSets = {};
+  data.categories.forEach(c => {
+    validEnSets[c.id] = new Set(c.options.map(o => o.en).filter(en => en && en.trim() !== ''));
+  });
+  Object.keys(builderSel).forEach(catId => {
+    if (!validEnSets[catId]) {
+      delete builderSel[catId];
+    } else {
+      builderSel[catId] = builderSel[catId].filter(en => en && en.trim() !== '' && validEnSets[catId].has(en));
+      if (builderSel[catId].length === 0) delete builderSel[catId];
+    }
+  });
+  renderBuilder();
+  showToast('🔄 リフレッシュしました');
 }
 
 // ─────────────────────────────────────────────────────
@@ -1941,74 +2217,56 @@ document.addEventListener('keydown', e => {
     showToast('⌨️ Ctrl+R — 選択をリセットしました');
   }
   // / → 検索バーにフォーカス
-  if (e.key === '/' && document.getElementById('view-builder').classList.contains('active')) {
+  if (e.key === '/' && document.getElementById('view-builder-outer').classList.contains('active')) {
     e.preventDefault();
     const sb = document.getElementById('tag-search');
     sb.focus(); sb.select();
   }
 });
 
+
 // ─────────────────────────────────────────────────────
-// FREE VERSION LIMIT
+// FREE VERSION LIMITS
 // ─────────────────────────────────────────────────────
 const FREE_TAG_LIMIT = 20;
+const FREE_PRESET_LIMIT = 3;
 
-// デフォルトの初期タグ数を記録（初回起動時に確定）
-function getDefaultOptCount(catId) {
-  const key = 'jc_free_default_opts_' + catId;
-  const saved = localStorage.getItem(key);
-  if (saved !== null) return parseInt(saved);
-  const cat = data.categories.find(c => c.id === catId);
-  const count = cat ? cat.options.length : 0;
-  localStorage.setItem(key, count);
-  return count;
-}
-
-function initFreeDefaults() {
-  // localStorageにデフォルト数が未記録の場合のみ初期化
-  // （初回起動時・または古いキャッシュをクリアした場合）
-  if (!localStorage.getItem('jc_free_default_count')) {
-    const count = data.categories.reduce((sum, c) => sum + c.options.length, 0);
-    localStorage.setItem('jc_free_default_count', count);
-  }
-  // カテゴリごとのデフォルトオプション数も初期化
-  data.categories.forEach(cat => {
-    const key = 'jc_free_default_opts_' + cat.id;
-    if (!localStorage.getItem(key)) {
-      localStorage.setItem(key, cat.options.length);
+// デフォルトカテゴリのタグ数をキャッシュ
+let _defaultTagTotal = null;
+function getDefaultTagTotal() {
+  if (_defaultTagTotal === null) {
+    // localStorageに保存されていなければ現在のdata.categoriesをデフォルトとして記録
+    const saved = localStorage.getItem('jc_free_default_tag_count');
+    if (saved) {
+      _defaultTagTotal = parseInt(saved);
+    } else {
+      _defaultTagTotal = data.categories.reduce((s, c) => s + c.options.length, 0);
+      localStorage.setItem('jc_free_default_tag_count', _defaultTagTotal);
     }
-  });
+  }
+  return _defaultTagTotal;
 }
 
 function countCustomTags() {
-  const total = data.categories.reduce((sum, c) => sum + c.options.length, 0);
-  const defaultCount = getDefaultTagCount();
-  return Math.max(0, total - defaultCount);
+  const total = data.categories.reduce((s, c) => s + c.options.length, 0);
+  return Math.max(0, total - getDefaultTagTotal());
 }
 
-function getDefaultTagCount() {
-  const saved = localStorage.getItem('jc_free_default_count');
-  if (saved) return parseInt(saved);
-  // 未記録の場合はdefaultCategoriesのタグ数を返す
-  return defaultCategories.reduce((sum, c) => sum + c.options.length, 0);
+function isTagLimitReached() {
+  return countCustomTags() >= FREE_TAG_LIMIT;
 }
 
 function updateFreeLimitUI() {
-  const customCount = countCustomTags();
-  const remaining = Math.max(0, FREE_TAG_LIMIT - customCount);
-  const pct = Math.min(100, (customCount / FREE_TAG_LIMIT) * 100);
-
-  const countEl = document.getElementById('free-limit-count');
-  const fillEl = document.getElementById('free-limit-fill');
-  if (countEl) countEl.textContent = remaining;
-  if (fillEl) {
-    fillEl.style.width = pct + '%';
-    fillEl.className = 'free-limit-fill' + (pct >= 100 ? ' full' : pct >= 70 ? ' warning' : '');
+  const custom = countCustomTags();
+  const remaining = Math.max(0, FREE_TAG_LIMIT - custom);
+  const pct = Math.min(100, (custom / FREE_TAG_LIMIT) * 100);
+  const el = document.getElementById('free-limit-count');
+  const fill = document.getElementById('free-limit-fill');
+  if (el) el.textContent = remaining;
+  if (fill) {
+    fill.style.width = pct + '%';
+    fill.className = 'free-limit-fill' + (pct >= 100 ? ' full' : pct >= 70 ? ' warning' : '');
   }
-}
-
-function isFreeLimitReached() {
-  return countCustomTags() >= FREE_TAG_LIMIT;
 }
 
 // ─────────────────────────────────────────────────────
@@ -2018,9 +2276,9 @@ renderBuilder();
 initOnboarding();
 initTheme();
 initTooltip();
-initFreeDefaults();
+initLayout();
+initMemo();
 updateFreeLimitUI();
-updatePresetLimitUI();
 </script>
 </body>
 </html>
