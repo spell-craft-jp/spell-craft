@@ -582,13 +582,18 @@ input{font-family:inherit;}
 
   /* ---------------- modal scaffold ---------------- */
   const modalRoot = document.getElementById('modal-root');
+  let _closeTimer = null;
   function closeModal(){
     const ov = modalRoot.querySelector('.modal-overlay');
     if(!ov) return;
     ov.classList.remove('open');
-    setTimeout(()=>{ modalRoot.innerHTML=''; }, 200);
+    clearTimeout(_closeTimer);
+    _closeTimer = setTimeout(()=>{ modalRoot.innerHTML=''; }, 200);
   }
   function openModal({title, bodyHTML, footerHTML, center, onMount}){
+    // Cancel any pending close timer so it doesn't wipe this new modal
+    clearTimeout(_closeTimer);
+    _closeTimer = null;
     modalRoot.innerHTML = `
       <div class="modal-overlay" id="modal-overlay">
         <div class="modal-sheet ${center?'center':''}">
@@ -637,16 +642,28 @@ input{font-family:inherit;}
       app:'namecraft', version:1, exportedAt:new Date().toISOString(),
       library: state.library, projects
     };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
+    const json = JSON.stringify(backup, null, 2);
     const d = new Date();
     const pad = n => String(n).padStart(2,'0');
+    const filename = `namecraft-backup-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
+
+    // iOS Safari: <a download> doesn't work — use Web Share API instead
+    const blob = new Blob([json], {type:'application/json'});
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[new File([blob], filename, {type:'application/json'})]})){
+      try{
+        await navigator.share({
+          files: [new File([blob], filename, {type:'application/json'})],
+          title: 'ネームCraft バックアップ'
+        });
+        return;
+      }catch(e){ /* cancelled or failed — fall through to download */ }
+    }
+
+    // Fallback: standard download (works on Android Chrome, PC browsers)
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `namecraft-backup-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
   }
 
@@ -674,7 +691,7 @@ input{font-family:inherit;}
         flashSaved();
       });
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'utf-8');
   }
 
   function openDataModal(){
@@ -684,7 +701,7 @@ input{font-family:inherit;}
         <p class="confirm-text">スマホで作った内容をパソコンへ持っていく時などに使います。書き出したファイルを読み込むと、すべてのプロジェクトを復元・統合できます。</p>
         <button class="modal-primary-btn" id="export-data-btn" style="margin-bottom:10px;">📦 書き出す（.jsonをダウンロード）</button>
         <button class="modal-secondary-btn" id="import-data-btn">📂 ファイルから読み込む</button>
-        <input type="file" id="import-file-input" accept="application/json,.json" class="hidden">`,
+        <input type="file" id="import-file-input" accept="application/json,.json,text/plain,text/*" class="hidden">`,
       onMount:(ov)=>{
         ov.querySelector('#export-data-btn').addEventListener('click', async ()=>{
           await exportAllData();
