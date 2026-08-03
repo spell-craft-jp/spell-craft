@@ -100,10 +100,10 @@
   .work-row:last-child{ border-bottom:none; }
   .work-row .row-main{ display:flex; align-items:center; justify-content:space-between; }
   .work-row .name{ font-size:14px; font-weight:500; }
-  .work-row .name a, table.dash .name-link{
+  .work-row .name a{
     color:var(--text); text-decoration:none; border-bottom:1px dotted var(--muted2);
   }
-  .work-row .name a:active, table.dash .name-link:active{ color:var(--accent); }
+  .work-row .name a:active{ color:var(--accent); }
   .link-ico{ font-size:10px; color:var(--muted2); margin-left:3px; vertical-align:2px; }
   .work-row .price{ font-size:11px; color:var(--muted2); font-family:'JetBrains Mono',monospace; margin-top:2px;}
   .row-sub{ display:flex; align-items:center; gap:6px; margin-top:8px; }
@@ -132,23 +132,26 @@
     width:40px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:700;
   }
 
-  /* ---- dashboard ---- */
-  .dash-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  table.dash{ border-collapse:collapse; width:100%; min-width:640px; font-size:12.5px; }
-  table.dash th, table.dash td{
-    padding:10px 10px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--border);
+  /* ---- dashboard (card layout, avoids squished tables on narrow screens) ---- */
+  .dash-cards{ display:flex; flex-direction:column; gap:10px; }
+  @media (min-width:640px){
+    .dash-cards{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   }
-  table.dash th{
-    color:var(--muted); font-weight:500; font-size:11px; letter-spacing:0.03em; text-transform:uppercase;
-    position:sticky; top:0; background:var(--surface);
+  .work-dash-card{
+    background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px 13px;
   }
-  table.dash td.name-cell, table.dash th.name-cell{
-    text-align:left; position:sticky; left:0; background:var(--surface); font-weight:700;
-    min-width:120px;
-  }
-  table.dash td.mono, table.dash th{ font-family:'JetBrains Mono',monospace; }
-  table.dash tr.total-row td{ border-top:2px solid var(--border); font-weight:700; color:var(--accent); }
-  .col-divider{ border-left:1px solid var(--border); }
+  .wd-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px; }
+  .wd-name{ font-size:14px; font-weight:700; line-height:1.35; }
+  .wd-name a{ color:var(--text); text-decoration:none; border-bottom:1px dotted var(--muted2); }
+  .wd-name a:active{ color:var(--accent); }
+  .wd-date{ font-size:10.5px; color:var(--muted2); font-family:'JetBrains Mono',monospace; white-space:nowrap; flex-shrink:0; padding-top:2px;}
+  .wd-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:7px; }
+  .wd-stat{ background:var(--surface3); border-radius:8px; padding:7px 5px; text-align:center; }
+  .wd-stat .l{ font-size:9px; color:var(--muted); letter-spacing:0.02em; display:block; margin-bottom:3px; white-space:nowrap; }
+  .wd-stat .v{ font-size:12.5px; font-weight:700; font-family:'JetBrains Mono',monospace; display:block; }
+  .wd-stat.highlight{ background:var(--plus-dim); }
+  .wd-stat.highlight .v{ color:var(--plus); }
+  .wd-stat.highlight .l{ color:#9fe6d2; }
 
   .stat-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
   .stat-card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
@@ -274,24 +277,8 @@
     </div>
 
     <div class="card">
-      <h2>作品別集計（横スクロール可・金額は卸単価ベース）</h2>
-      <div class="dash-scroll">
-        <table class="dash" id="dashTable">
-          <thead>
-            <tr>
-              <th class="name-cell">作品名</th>
-              <th>発売日</th>
-              <th>販売単価</th>
-              <th>基準卸単価</th>
-              <th class="col-divider">当月点数</th>
-              <th>当月卸売上</th>
-              <th class="col-divider">累計点数</th>
-              <th>累計卸売上</th>
-            </tr>
-          </thead>
-          <tbody id="dashBody"></tbody>
-        </table>
-      </div>
+      <h2>作品別集計（金額は卸単価ベース）</h2>
+      <div class="dash-cards" id="dashCards"></div>
       <div class="empty" id="dashEmpty" style="display:none;">作品を登録すると集計が表示されます。</div>
     </div>
   </section>
@@ -601,9 +588,9 @@ function aggregateForWork(workId){
 
 /* ============ dashboard ============ */
 function renderDashboard(){
-  const body = document.getElementById('dashBody');
+  const container = document.getElementById('dashCards');
   const empty = document.getElementById('dashEmpty');
-  body.innerHTML = '';
+  container.innerHTML = '';
   if(state.works.length===0){ empty.style.display='block'; }
   else{ empty.style.display='none'; }
 
@@ -612,33 +599,24 @@ function renderDashboard(){
   state.works.forEach(w=>{
     const a = aggregateForWork(w.id);
     sMonthQty+=a.monthQty; sMonthAmt+=a.monthAmt; sCumQty+=a.cumQty; sCumAmt+=a.cumAmt;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="name-cell">${w.url ? `<a class="name-link" href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(w.name)}<span class="link-ico">↗</span></a>` : escapeHtml(w.name)}</td>
-      <td>${w.releaseDate || '—'}</td>
-      <td class="mono">${yen(w.price)}</td>
-      <td class="mono">${yen(w.wholesale)}</td>
-      <td class="mono col-divider">${a.monthQty}</td>
-      <td class="mono">${yen(a.monthAmt)}</td>
-      <td class="mono col-divider">${a.cumQty}</td>
-      <td class="mono">${yen(a.cumAmt)}</td>
+    const card = document.createElement('div');
+    card.className = 'work-dash-card';
+    card.innerHTML = `
+      <div class="wd-head">
+        <div class="wd-name">${w.url ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(w.name)}<span class="link-ico">↗</span></a>` : escapeHtml(w.name)}</div>
+        <div class="wd-date">${w.releaseDate || '—'}</div>
+      </div>
+      <div class="wd-grid">
+        <div class="wd-stat"><span class="l">販売単価</span><span class="v">${yen(w.price)}</span></div>
+        <div class="wd-stat"><span class="l">基準卸単価</span><span class="v">${yen(w.wholesale)}</span></div>
+        <div class="wd-stat"><span class="l">当月点数</span><span class="v">${a.monthQty}</span></div>
+        <div class="wd-stat highlight"><span class="l">当月卸売上</span><span class="v">${yen(a.monthAmt)}</span></div>
+        <div class="wd-stat"><span class="l">累計点数</span><span class="v">${a.cumQty}</span></div>
+        <div class="wd-stat highlight"><span class="l">累計卸売上</span><span class="v">${yen(a.cumAmt)}</span></div>
+      </div>
     `;
-    body.appendChild(tr);
+    container.appendChild(card);
   });
-
-  if(state.works.length>0){
-    const tr = document.createElement('tr');
-    tr.className='total-row';
-    tr.innerHTML = `
-      <td class="name-cell">合計</td>
-      <td></td><td></td><td class="col-divider"></td>
-      <td class="mono">${sMonthQty}</td>
-      <td class="mono">${yen(sMonthAmt)}</td>
-      <td class="mono col-divider">${sCumQty}</td>
-      <td class="mono">${yen(sCumAmt)}</td>
-    `;
-    body.appendChild(tr);
-  }
 
   document.getElementById('mSumQty').textContent = sMonthQty;
   document.getElementById('mSumAmt').textContent = yen(sMonthAmt);
