@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>日計帳 | Sales Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#12141a;
+    --surface:#1b1e26;
+    --surface2:#232733;
+    --surface3:#2a2f3d;
+    --border:#2c3140;
+    --text:#eceef1;
+    --muted:#8890a0;
+    --muted2:#5f6675;
+    --plus:#49d3ac;
+    --plus-dim:#2b6656;
+    --minus:#f2795a;
+    --minus-dim:#7a3f30;
+    --accent:#7c9cf2;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    padding-bottom:76px;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  header.top{
+    position:sticky; top:0; z-index:20;
+    background:rgba(18,20,26,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    padding:14px 18px 12px;
+  }
+  header.top .brand{
+    display:flex; align-items:baseline; gap:8px;
+  }
+  header.top .brand .mark{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--plus);
+    box-shadow:0 0 8px var(--plus);
+  }
+  header.top h1{
+    font-size:15px; font-weight:700; margin:0; letter-spacing:0.02em;
+  }
+  header.top .sub{
+    font-size:11px; color:var(--muted2); margin-top:2px; letter-spacing:0.05em;
+  }
+  main{ padding:16px; max-width:720px; margin:0 auto; }
+  .screen{ display:none; animation:fadein .18s ease; }
+  .screen.active{ display:block; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---- shared card ---- */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .card h2{
+    font-size:13px; font-weight:700; color:var(--muted); margin:0 0 12px;
+    letter-spacing:0.04em; text-transform:uppercase;
+  }
+
+  /* ---- date entry ---- */
+  .date-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .date-row input[type=date]{
+    flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    font-family:'JetBrains Mono', monospace; font-size:15px; padding:10px 12px; border-radius:10px;
+  }
+  .date-nav-btn{
+    background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    width:38px; height:38px; border-radius:10px; font-size:16px; flex-shrink:0;
+  }
+  .today-total{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    background:linear-gradient(135deg, var(--surface2), var(--surface3));
+    border:1px solid var(--border); border-radius:14px; padding:18px 18px; margin-bottom:16px;
+  }
+  .today-total .label{ font-size:11px; color:var(--muted); letter-spacing:0.08em; margin-bottom:6px; }
+  .today-total .value{ font-size:30px; font-weight:700; font-family:'JetBrains Mono',monospace; }
+  .today-total .value span.unit{ font-size:13px; color:var(--muted); margin-left:4px; font-family:'Zen Kaku Gothic New';}
+  .today-total .amount{ font-size:16px; color:var(--plus); font-family:'JetBrains Mono',monospace; font-weight:700;}
+
+  .work-row{
+    padding:12px 0; border-bottom:1px solid var(--border);
+  }
+  .work-row:last-child{ border-bottom:none; }
+  .work-row .row-main{ display:flex; align-items:center; justify-content:space-between; }
+  .work-row .name{ font-size:14px; font-weight:500; }
+  .work-row .name a, table.dash .name-link{
+    color:var(--text); text-decoration:none; border-bottom:1px dotted var(--muted2);
+  }
+  .work-row .name a:active, table.dash .name-link:active{ color:var(--accent); }
+  .link-ico{ font-size:10px; color:var(--muted2); margin-left:3px; vertical-align:2px; }
+  .work-row .price{ font-size:11px; color:var(--muted2); font-family:'JetBrains Mono',monospace; margin-top:2px;}
+  .row-sub{ display:flex; align-items:center; gap:6px; margin-top:8px; }
+  .row-sub .plabel{ font-size:10.5px; color:var(--muted2); letter-spacing:0.02em; }
+  .row-sub .price-input{
+    background:var(--surface2); border:1px solid var(--border); color:var(--plus);
+    font-family:'JetBrains Mono',monospace; font-size:12.5px; font-weight:700;
+    width:88px; padding:5px 7px; border-radius:8px;
+  }
+  .row-sub .price-input.custom{ border-color:var(--accent); color:var(--accent); }
+  .row-sub .reset-price{
+    background:none; border:none; color:var(--muted2); font-size:10.5px; text-decoration:underline;
+    padding:2px 4px; display:none;
+  }
+  .row-sub .reset-price.show{ display:inline; }
+  .stepper{ display:flex; align-items:center; gap:0; }
+  .stepper button{
+    width:38px; height:38px; border-radius:10px; border:1px solid var(--border);
+    font-size:18px; font-weight:700; background:var(--surface2); color:var(--text);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .stepper button.minus{ color:var(--minus); }
+  .stepper button.plus{ color:var(--plus); }
+  .stepper button:active{ transform:scale(0.92); }
+  .stepper .qty{
+    width:40px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:17px; font-weight:700;
+  }
+
+  /* ---- dashboard ---- */
+  .dash-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table.dash{ border-collapse:collapse; width:100%; min-width:640px; font-size:12.5px; }
+  table.dash th, table.dash td{
+    padding:10px 10px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--border);
+  }
+  table.dash th{
+    color:var(--muted); font-weight:500; font-size:11px; letter-spacing:0.03em; text-transform:uppercase;
+    position:sticky; top:0; background:var(--surface);
+  }
+  table.dash td.name-cell, table.dash th.name-cell{
+    text-align:left; position:sticky; left:0; background:var(--surface); font-weight:700;
+    min-width:120px;
+  }
+  table.dash td.mono, table.dash th{ font-family:'JetBrains Mono',monospace; }
+  table.dash tr.total-row td{ border-top:2px solid var(--border); font-weight:700; color:var(--accent); }
+  .col-divider{ border-left:1px solid var(--border); }
+
+  .stat-cards{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .stat-card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; }
+  .stat-card .l{ font-size:10.5px; color:var(--muted); letter-spacing:0.04em; margin-bottom:4px;}
+  .stat-card .v{ font-size:19px; font-weight:700; font-family:'JetBrains Mono',monospace; }
+  .stat-card .v.plus{ color:var(--plus); }
+
+  /* ---- charts ---- */
+  canvas{ max-width:100%; }
+  .chart-wrap{ position:relative; height:230px; margin-bottom:6px; }
+  select, .seg{
+    background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    padding:8px 10px; border-radius:10px; font-size:13px; font-family:'Zen Kaku Gothic New';
+  }
+  .seg-group{ display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .seg-group button{
+    background:var(--surface2); border:1px solid var(--border); color:var(--muted);
+    padding:7px 12px; border-radius:20px; font-size:12px; font-family:'Zen Kaku Gothic New';
+  }
+  .seg-group button.active{ background:var(--accent); color:#12141a; border-color:var(--accent); font-weight:700; }
+
+  /* ---- work settings ---- */
+  .work-edit{
+    background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;
+  }
+  .work-edit .fields{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .work-edit label{ font-size:10.5px; color:var(--muted); display:block; margin-bottom:3px; }
+  .work-edit input[type=text], .work-edit input[type=number], .work-edit input[type=date]{
+    width:100%; background:var(--surface3); border:1px solid var(--border); color:var(--text);
+    padding:8px 9px; border-radius:8px; font-size:13px; font-family:'JetBrains Mono',monospace;
+  }
+  .work-edit input[type=text]{ font-family:'Zen Kaku Gothic New'; }
+  .work-edit .row-top{ display:flex; justify-content:space-between; align-items:center; }
+  .del-btn{ background:none; border:none; color:var(--minus); font-size:12px; padding:4px 6px; }
+  .add-btn{
+    width:100%; background:var(--surface2); border:1px dashed var(--muted2); color:var(--muted);
+    padding:12px; border-radius:12px; font-size:13px; margin-top:4px;
+  }
+
+  /* ---- settings / sync ---- */
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; }
+  .field input{
+    width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    padding:10px 11px; border-radius:10px; font-size:13px; font-family:'JetBrains Mono',monospace;
+  }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    background:var(--accent); color:#12141a; border:none; font-weight:700;
+    padding:11px 16px; border-radius:10px; font-size:13px; font-family:'Zen Kaku Gothic New'; width:100%;
+  }
+  .btn.ghost{ background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .btn-row{ display:flex; gap:8px; }
+  .btn-row .btn{ flex:1; }
+  .note{ font-size:11.5px; color:var(--muted2); line-height:1.6; margin-top:6px; }
+  .status-pill{
+    display:inline-block; font-size:10.5px; padding:3px 9px; border-radius:20px;
+    background:var(--surface3); color:var(--muted); margin-bottom:10px;
+  }
+  .status-pill.ok{ background:var(--plus-dim); color:var(--plus); }
+  .status-pill.err{ background:var(--minus-dim); color:var(--minus); }
+
+  /* ---- bottom nav ---- */
+  nav.bottom{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    background:rgba(27,30,38,0.96); backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);
+    display:flex; padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav.bottom button{
+    flex:1; background:none; border:none; color:var(--muted2);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:8px 2px; font-size:10.5px; font-family:'Zen Kaku Gothic New';
+  }
+  nav.bottom button .ico{ font-size:18px; line-height:1; }
+  nav.bottom button.active{ color:var(--accent); }
+
+  .empty{ text-align:center; padding:30px 10px; color:var(--muted2); font-size:13px; }
+  ::-webkit-scrollbar{ height:6px; width:6px; }
+  ::-webkit-scrollbar-thumb{ background:var(--surface3); border-radius:4px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><div class="mark"></div><h1>日計帳</h1></div>
+  <div class="sub" id="headerSub">SALES LEDGER</div>
+</header>
+
+<main>
+
+  <!-- ===== 日計入力 ===== -->
+  <section class="screen active" id="screen-entry">
+    <div class="date-row">
+      <button class="date-nav-btn" onclick="shiftDate(-1)">‹</button>
+      <input type="date" id="entryDate">
+      <button class="date-nav-btn" onclick="shiftDate(1)">›</button>
+    </div>
+
+    <div class="today-total">
+      <div>
+        <div class="label">本日の販売点数</div>
+        <div class="value" id="todayQty">0<span class="unit">点</span></div>
+      </div>
+      <div class="amount" id="todayAmount">¥0</div>
+    </div>
+
+    <div class="card">
+      <h2>作品ごとの数量・卸単価</h2>
+      <div id="entryList"></div>
+      <div class="empty" id="entryEmpty" style="display:none;">作品が登録されていません。設定タブから追加してください。</div>
+      <p class="note">金額は卸単価ベースで集計されます。値引きなどでその日だけ単価が変わる場合は、各作品の単価欄を直接書き換えてください（作品自体は同じものとして集計されます）。</p>
+    </div>
+  </section>
+
+  <!-- ===== ダッシュボード ===== -->
+  <section class="screen" id="screen-dash">
+    <div class="stat-cards">
+      <div class="stat-card"><div class="l">当月合計販売点数</div><div class="v" id="mSumQty">0</div></div>
+      <div class="stat-card"><div class="l">当月合計卸売上</div><div class="v plus" id="mSumAmt">¥0</div></div>
+      <div class="stat-card"><div class="l">累計販売点数</div><div class="v" id="cSumQty">0</div></div>
+      <div class="stat-card"><div class="l">累計卸売上</div><div class="v plus" id="cSumAmt">¥0</div></div>
+    </div>
+
+    <div class="card">
+      <h2>作品別集計（横スクロール可・金額は卸単価ベース）</h2>
+      <div class="dash-scroll">
+        <table class="dash" id="dashTable">
+          <thead>
+            <tr>
+              <th class="name-cell">作品名</th>
+              <th>発売日</th>
+              <th>販売単価</th>
+              <th>基準卸単価</th>
+              <th class="col-divider">当月点数</th>
+              <th>当月卸売上</th>
+              <th class="col-divider">累計点数</th>
+              <th>累計卸売上</th>
+            </tr>
+          </thead>
+          <tbody id="dashBody"></tbody>
+        </table>
+      </div>
+      <div class="empty" id="dashEmpty" style="display:none;">作品を登録すると集計が表示されます。</div>
+    </div>
+  </section>
+
+  <!-- ===== グラフ ===== -->
+  <section class="screen" id="screen-charts">
+    <div class="card">
+      <h2>日別売上推移</h2>
+      <div class="seg-group" id="rangeSeg">
+        <button data-range="14" class="active">直近14日</button>
+        <button data-range="30">直近30日</button>
+        <button data-range="90">直近90日</button>
+      </div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>作品別 累計売上構成</h2>
+      <div class="chart-wrap"><canvas id="shareChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>月別売上推移</h2>
+      <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ===== 設定（作品） ===== -->
+  <section class="screen" id="screen-works">
+    <div class="card">
+      <h2>作品マスタ</h2>
+      <div id="worksEditList"></div>
+      <button class="add-btn" onclick="addWork()">＋ 作品を追加</button>
+    </div>
+  </section>
+
+  <!-- ===== 設定（同期） ===== -->
+  <section class="screen" id="screen-sync">
+    <div class="card">
+      <h2>データの保存・共有</h2>
+      <div id="syncStatus" class="status-pill">未接続 — この端末のみに保存</div>
+      <p class="note">
+        複数端末からアクセスするには、無料の<strong>JSONBin.io</strong>アカウントでBinを作成し、Bin IDとAPIキー（X-Master-Key）を入力してください。<br>
+        1) jsonbin.io で無料登録 → 2) 「Create Bin」で空の <span class="mono">{}</span> を保存 → 3) Bin IDとAPIキーを下に入力。
+      </p>
+      <div class="field">
+        <label>Bin ID</label>
+        <input type="text" id="binId" placeholder="例）64f1a2...">
+      </div>
+      <div class="field">
+        <label>X-Master-Key（APIキー）</label>
+        <input type="text" id="apiKey" placeholder="$2a$10$...">
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" onclick="pullData()">↓ 取得（この端末に反映）</button>
+        <button class="btn" onclick="pushData()">↑ 保存（クラウドへ送信）</button>
+      </div>
+      <p class="note" id="syncLog"></p>
+    </div>
+
+    <div class="card">
+      <h2>バックアップ</h2>
+      <div class="btn-row">
+        <button class="btn ghost" onclick="exportJson()">JSONを書き出す</button>
+        <label class="btn ghost" style="cursor:pointer;">
+          読み込む
+          <input type="file" id="importFile" accept="application/json" style="display:none;" onchange="importJson(event)">
+        </label>
+      </div>
+      <p class="note">GitHub Pagesにアップロードして使う場合、端末ごとのlocalStorageとは別にJSONBin側が共有データの正になります。定期的にJSONで書き出しておくと安心です。</p>
+    </div>
+  </section>
+
+</main>
+
+<nav class="bottom">
+  <button class="active" data-screen="entry" onclick="showScreen('entry')"><span class="ico">✎</span>日計入力</button>
+  <button data-screen="dash" onclick="showScreen('dash')"><span class="ico">▦</span>ダッシュボード</button>
+  <button data-screen="charts" onclick="showScreen('charts')"><span class="ico">📈</span>グラフ</button>
+  <button data-screen="works" onclick="showScreen('works')"><span class="ico">☰</span>作品設定</button>
+  <button data-screen="sync" onclick="showScreen('sync')"><span class="ico">⇅</span>同期</button>
+</nav>
+
+<script>
+/* ============ state ============ */
+const STORAGE_KEY = 'doujinSalesData_v1';
+let state = loadState();
+let trendChart, shareChart, monthChart;
+let currentRange = 14;
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      migrateSalesFormat(parsed);
+      return parsed;
+    }
+  }catch(e){}
+  return {
+    works: [
+      { id: uid(), name: '放課後、恋をした。第1話', price: 980, wholesale: 686, releaseDate: '2025-09-01' }
+    ],
+    sales: {},
+    sync: { binId:'', apiKey:'' }
+  };
+}
+
+// Older versions stored sales[date][workId] as a plain number (qty only).
+// New format stores { qty, wholesale } so each entry keeps the unit price
+// that was actually in effect that day, even if the work's default price
+// changes later (e.g. temporary discounts).
+function migrateSalesFormat(data){
+  if(!data.sales) return;
+  Object.keys(data.sales).forEach(dateStr=>{
+    const day = data.sales[dateStr];
+    Object.keys(day).forEach(workId=>{
+      const entry = day[workId];
+      if(typeof entry === 'number'){
+        const w = (data.works||[]).find(x=>x.id===workId);
+        day[workId] = { qty: entry, wholesale: w ? Number(w.wholesale)||0 : 0 };
+      }
+    });
+  });
+}
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+function uid(){ return Math.random().toString(36).slice(2,9); }
+
+function todayStr(){
+  const d = new Date();
+  return fmtDate(d);
+}
+function fmtDate(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function yen(n){ return '¥' + Math.round(n).toLocaleString('ja-JP'); }
+
+/* ============ navigation ============ */
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.querySelectorAll('nav.bottom button').forEach(b=>b.classList.toggle('active', b.dataset.screen===name));
+  if(name==='dash') renderDashboard();
+  if(name==='charts') renderCharts();
+  if(name==='works') renderWorksEdit();
+  if(name==='sync') renderSyncPanel();
+}
+
+/* ============ entry screen ============ */
+const entryDateInput = document.getElementById('entryDate');
+entryDateInput.value = todayStr();
+entryDateInput.addEventListener('change', renderEntry);
+
+function shiftDate(delta){
+  const d = new Date(entryDateInput.value + 'T00:00:00');
+  d.setDate(d.getDate()+delta);
+  entryDateInput.value = fmtDate(d);
+  renderEntry();
+}
+
+function getEntry(dateStr, workId){
+  const e = state.sales[dateStr] && state.sales[dateStr][workId];
+  return e || null;
+}
+// Effective wholesale price for this work on this date: the price captured
+// when this date's entry was first created, or the work's current default
+// wholesale price if nothing has been recorded yet for this date.
+function getEffectivePrice(dateStr, workId){
+  const entry = getEntry(dateStr, workId);
+  if(entry) return Number(entry.wholesale)||0;
+  const w = state.works.find(x=>x.id===workId);
+  return w ? Number(w.wholesale)||0 : 0;
+}
+function getQty(dateStr, workId){
+  const entry = getEntry(dateStr, workId);
+  return entry ? entry.qty : 0;
+}
+function ensureEntry(dateStr, workId){
+  if(!state.sales[dateStr]) state.sales[dateStr] = {};
+  if(!state.sales[dateStr][workId]){
+    const w = state.works.find(x=>x.id===workId);
+    state.sales[dateStr][workId] = { qty:0, wholesale: w ? Number(w.wholesale)||0 : 0 };
+  }
+  return state.sales[dateStr][workId];
+}
+function setQty(dateStr, workId, qty){
+  if(qty < 0) qty = 0;
+  const entry = ensureEntry(dateStr, workId);
+  entry.qty = qty;
+  saveState();
+}
+function setPriceForDate(dateStr, workId, price){
+  const entry = ensureEntry(dateStr, workId);
+  entry.wholesale = Number(price)||0;
+  saveState();
+}
+
+function renderEntry(){
+  const dateStr = entryDateInput.value;
+  const list = document.getElementById('entryList');
+  const empty = document.getElementById('entryEmpty');
+  list.innerHTML = '';
+  if(state.works.length === 0){ empty.style.display='block'; }
+  else { empty.style.display='none'; }
+
+  let totalQty = 0, totalAmt = 0;
+  state.works.forEach(w=>{
+    const qty = getQty(dateStr, w.id);
+    const price = getEffectivePrice(dateStr, w.id);
+    const isCustom = price !== (Number(w.wholesale)||0);
+    totalQty += qty;
+    totalAmt += qty * price;
+
+    const row = document.createElement('div');
+    row.className = 'work-row';
+    row.innerHTML = `
+      <div class="row-main">
+        <div class="name">${w.url ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(w.name)}<span class="link-ico">↗</span></a>` : escapeHtml(w.name)}</div>
+        <div class="stepper">
+          <button class="minus" onclick="stepQty('${w.id}',-1)">−</button>
+          <div class="qty" id="qty-${w.id}">${qty}</div>
+          <button class="plus" onclick="stepQty('${w.id}',1)">＋</button>
+        </div>
+      </div>
+      <div class="row-sub">
+        <span class="plabel">卸単価</span>
+        <input type="number" class="price-input${isCustom ? ' custom' : ''}" id="price-${w.id}"
+          value="${price}" onchange="onPriceInput('${w.id}', this.value)">
+        <button class="reset-price${isCustom ? ' show' : ''}" id="reset-${w.id}" onclick="resetPriceForDate('${w.id}')">既定に戻す</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+
+  document.getElementById('todayQty').innerHTML = `${totalQty}<span class="unit">点</span>`;
+  document.getElementById('todayAmount').textContent = yen(totalAmt);
+}
+
+function stepQty(workId, delta){
+  const dateStr = entryDateInput.value;
+  const cur = getQty(dateStr, workId);
+  const next = Math.max(0, cur + delta);
+  setQty(dateStr, workId, next);
+  document.getElementById('qty-'+workId).textContent = next;
+  recalcTodayTotals();
+}
+
+function onPriceInput(workId, value){
+  const dateStr = entryDateInput.value;
+  setPriceForDate(dateStr, workId, value);
+  const w = state.works.find(x=>x.id===workId);
+  const isCustom = (Number(value)||0) !== (Number(w.wholesale)||0);
+  document.getElementById('reset-'+workId).classList.toggle('show', isCustom);
+  document.getElementById('price-'+workId).classList.toggle('custom', isCustom);
+  recalcTodayTotals();
+}
+
+function resetPriceForDate(workId){
+  const dateStr = entryDateInput.value;
+  const w = state.works.find(x=>x.id===workId);
+  const defaultPrice = w ? Number(w.wholesale)||0 : 0;
+  setPriceForDate(dateStr, workId, defaultPrice);
+  document.getElementById('price-'+workId).value = defaultPrice;
+  document.getElementById('price-'+workId).classList.remove('custom');
+  document.getElementById('reset-'+workId).classList.remove('show');
+  recalcTodayTotals();
+}
+
+function recalcTodayTotals(){
+  const dateStr = entryDateInput.value;
+  let totalQty = 0, totalAmt = 0;
+  state.works.forEach(w=>{
+    const q = getQty(dateStr, w.id);
+    const price = getEffectivePrice(dateStr, w.id);
+    totalQty += q;
+    totalAmt += q * price;
+  });
+  document.getElementById('todayQty').innerHTML = `${totalQty}<span class="unit">点</span>`;
+  document.getElementById('todayAmount').textContent = yen(totalAmt);
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ============ aggregation helpers ============ */
+function monthKey(dateStr){ return dateStr.slice(0,7); } // YYYY-MM
+
+function aggregateForWork(workId){
+  const curMonth = monthKey(todayStr());
+  let monthQty=0, monthAmt=0, cumQty=0, cumAmt=0;
+  Object.keys(state.sales).forEach(dateStr=>{
+    const entry = state.sales[dateStr][workId];
+    if(!entry || !entry.qty) return;
+    const qty = entry.qty;
+    const price = Number(entry.wholesale)||0; // price actually in effect that day
+    cumQty += qty;
+    cumAmt += qty*price;
+    if(monthKey(dateStr) === curMonth){
+      monthQty += qty;
+      monthAmt += qty*price;
+    }
+  });
+  return { monthQty, monthAmt, cumQty, cumAmt };
+}
+
+/* ============ dashboard ============ */
+function renderDashboard(){
+  const body = document.getElementById('dashBody');
+  const empty = document.getElementById('dashEmpty');
+  body.innerHTML = '';
+  if(state.works.length===0){ empty.style.display='block'; }
+  else{ empty.style.display='none'; }
+
+  let sMonthQty=0,sMonthAmt=0,sCumQty=0,sCumAmt=0;
+
+  state.works.forEach(w=>{
+    const a = aggregateForWork(w.id);
+    sMonthQty+=a.monthQty; sMonthAmt+=a.monthAmt; sCumQty+=a.cumQty; sCumAmt+=a.cumAmt;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="name-cell">${w.url ? `<a class="name-link" href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(w.name)}<span class="link-ico">↗</span></a>` : escapeHtml(w.name)}</td>
+      <td>${w.releaseDate || '—'}</td>
+      <td class="mono">${yen(w.price)}</td>
+      <td class="mono">${yen(w.wholesale)}</td>
+      <td class="mono col-divider">${a.monthQty}</td>
+      <td class="mono">${yen(a.monthAmt)}</td>
+      <td class="mono col-divider">${a.cumQty}</td>
+      <td class="mono">${yen(a.cumAmt)}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  if(state.works.length>0){
+    const tr = document.createElement('tr');
+    tr.className='total-row';
+    tr.innerHTML = `
+      <td class="name-cell">合計</td>
+      <td></td><td></td><td class="col-divider"></td>
+      <td class="mono">${sMonthQty}</td>
+      <td class="mono">${yen(sMonthAmt)}</td>
+      <td class="mono col-divider">${sCumQty}</td>
+      <td class="mono">${yen(sCumAmt)}</td>
+    `;
+    body.appendChild(tr);
+  }
+
+  document.getElementById('mSumQty').textContent = sMonthQty;
+  document.getElementById('mSumAmt').textContent = yen(sMonthAmt);
+  document.getElementById('cSumQty').textContent = sCumQty;
+  document.getElementById('cSumAmt').textContent = yen(sCumAmt);
+}
+
+/* ============ charts ============ */
+const chartColors = ['#49d3ac','#7c9cf2','#f2795a','#e8c56c','#c17ce8','#6ce8d8','#e86ca0','#9be86c'];
+
+document.getElementById('rangeSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  document.querySelectorAll('#rangeSeg button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRange = Number(btn.dataset.range);
+  renderCharts();
+});
+
+function renderCharts(){
+  renderTrendChart();
+  renderShareChart();
+  renderMonthChart();
+}
+
+function lastNDates(n){
+  const arr = [];
+  const d = new Date();
+  for(let i=n-1;i>=0;i--){
+    const dd = new Date(d);
+    dd.setDate(d.getDate()-i);
+    arr.push(fmtDate(dd));
+  }
+  return arr;
+}
+
+function renderTrendChart(){
+  const dates = lastNDates(currentRange);
+  const totals = dates.map(dt=>{
+    const day = state.sales[dt];
+    if(!day) return 0;
+    return Object.keys(day).reduce((sum,wid)=>{
+      const entry = day[wid];
+      if(!entry) return sum;
+      return sum + (entry.qty||0)*(Number(entry.wholesale)||0);
+    },0);
+  });
+  const labels = dates.map(dt=>dt.slice(5).replace('-','/'));
+
+  const ctx = document.getElementById('trendChart');
+  if(trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels, datasets:[{ label:'売上', data: totals, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>yen(c.raw) } } },
+      scales:{
+        x:{ ticks:{ color:'#8890a0', font:{size:10} }, grid:{ display:false } },
+        y:{ ticks:{ color:'#8890a0', font:{size:10}, callback:v=>'¥'+v.toLocaleString() }, grid:{ color:'#2c3140' } }
+      }
+    }
+  });
+}
+
+function renderShareChart(){
+  const labels = [], data = [];
+  state.works.forEach(w=>{
+    const a = aggregateForWork(w.id);
+    if(a.cumAmt>0){ labels.push(w.name); data.push(a.cumAmt); }
+  });
+  const ctx = document.getElementById('shareChart');
+  if(shareChart) shareChart.destroy();
+  if(data.length===0){
+    ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+    return;
+  }
+  shareChart = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data, backgroundColor: labels.map((_,i)=>chartColors[i%chartColors.length]), borderColor:'#1b1e26', borderWidth:2 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'right', labels:{ color:'#eceef1', font:{size:10.5}, boxWidth:10 } },
+        tooltip:{ callbacks:{ label: c=> `${c.label}: ${yen(c.raw)}` } } }
+    }
+  });
+}
+
+function renderMonthChart(){
+  const monthTotals = {};
+  Object.keys(state.sales).forEach(dateStr=>{
+    const mk = monthKey(dateStr);
+    const day = state.sales[dateStr];
+    Object.keys(day).forEach(wid=>{
+      const entry = day[wid];
+      if(!entry) return;
+      monthTotals[mk] = (monthTotals[mk]||0) + (entry.qty||0)*(Number(entry.wholesale)||0);
+    });
+  });
+  const months = Object.keys(monthTotals).sort().slice(-12);
+  const data = months.map(m=>monthTotals[m]);
+  const ctx = document.getElementById('monthChart');
+  if(monthChart) monthChart.destroy();
+  if(months.length===0){
+    ctx.getContext('2d').clearRect(0,0,ctx.width,ctx.height);
+    return;
+  }
+  monthChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels: months, datasets:[{ label:'月間売上', data, borderColor:'#7c9cf2', backgroundColor:'rgba(124,156,242,0.15)', fill:true, tension:0.3, pointRadius:3 }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>yen(c.raw) } } },
+      scales:{
+        x:{ ticks:{ color:'#8890a0', font:{size:10} }, grid:{display:false} },
+        y:{ ticks:{ color:'#8890a0', font:{size:10}, callback:v=>'¥'+v.toLocaleString() }, grid:{ color:'#2c3140' } }
+      }
+    }
+  });
+}
+
+/* ============ works settings ============ */
+function renderWorksEdit(){
+  const list = document.getElementById('worksEditList');
+  list.innerHTML = '';
+  state.works.forEach(w=>{
+    const div = document.createElement('div');
+    div.className = 'work-edit';
+    div.innerHTML = `
+      <div class="row-top">
+        <input type="text" style="font-weight:700; font-size:13.5px; flex:1; margin-right:8px;" value="${escapeHtml(w.name)}" onchange="updateWork('${w.id}','name',this.value)">
+        <button class="del-btn" onclick="deleteWork('${w.id}')">削除</button>
+      </div>
+      <div class="fields">
+        <div>
+          <label>販売単価</label>
+          <input type="number" value="${w.price}" onchange="updateWork('${w.id}','price',this.value)">
+        </div>
+        <div>
+          <label>卸単価</label>
+          <input type="number" value="${w.wholesale}" onchange="updateWork('${w.id}','wholesale',this.value)">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label>発売日</label>
+          <input type="date" value="${w.releaseDate||''}" onchange="updateWork('${w.id}','releaseDate',this.value)">
+        </div>
+        <div style="grid-column:1/-1;">
+          <label>作品ページURL</label>
+          <input type="text" style="font-family:'Zen Kaku Gothic New';" value="${escapeHtml(w.url||'')}" placeholder="https://www.dmm.co.jp/..." onchange="updateWork('${w.id}','url',this.value)">
+        </div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+function addWork(){
+  state.works.push({ id:uid(), name:'新しい作品', price:0, wholesale:0, releaseDate: todayStr(), url:'' });
+  saveState();
+  renderWorksEdit();
+}
+function updateWork(id, field, value){
+  const w = state.works.find(x=>x.id===id);
+  if(!w) return;
+  w[field] = (field==='price'||field==='wholesale') ? Number(value) : value;
+  saveState();
+}
+function deleteWork(id){
+  if(!confirm('この作品を削除しますか？（過去の日計データは残ります）')) return;
+  state.works = state.works.filter(x=>x.id!==id);
+  saveState();
+  renderWorksEdit();
+}
+
+/* ============ sync (JSONBin.io) ============ */
+function renderSyncPanel(){
+  document.getElementById('binId').value = state.sync?.binId || '';
+  document.getElementById('apiKey').value = state.sync?.apiKey || '';
+  const pill = document.getElementById('syncStatus');
+  if(state.sync?.binId && state.sync?.apiKey){
+    pill.textContent = 'Bin設定済み — 同期可能';
+    pill.className = 'status-pill ok';
+  } else {
+    pill.textContent = '未接続 — この端末のみに保存';
+    pill.className = 'status-pill';
+  }
+}
+
+function saveSyncFields(){
+  state.sync = state.sync || {};
+  state.sync.binId = document.getElementById('binId').value.trim();
+  state.sync.apiKey = document.getElementById('apiKey').value.trim();
+  saveState();
+}
+
+async function pushData(){
+  saveSyncFields();
+  const log = document.getElementById('syncLog');
+  const { binId, apiKey } = state.sync;
+  if(!binId || !apiKey){ log.textContent = 'Bin IDとAPIキーを入力してください。'; return; }
+  log.textContent = '送信中...';
+  try{
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json', 'X-Master-Key': apiKey },
+      body: JSON.stringify({ works: state.works, sales: state.sales })
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    log.textContent = '✓ クラウドに保存しました（' + new Date().toLocaleTimeString('ja-JP') + '）';
+    renderSyncPanel();
+  }catch(e){
+    log.textContent = '送信に失敗しました: ' + e.message;
+  }
+}
+
+async function pullData(){
+  saveSyncFields();
+  const log = document.getElementById('syncLog');
+  const { binId, apiKey } = state.sync;
+  if(!binId || !apiKey){ log.textContent = 'Bin IDとAPIキーを入力してください。'; return; }
+  if(!confirm('クラウドのデータでこの端末を上書きします。よろしいですか？')) return;
+  log.textContent = '取得中...';
+  try{
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+      headers:{ 'X-Master-Key': apiKey }
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const json = await res.json();
+    const remote = json.record;
+    if(remote.works) state.works = remote.works;
+    if(remote.sales) state.sales = remote.sales;
+    saveState();
+    log.textContent = '✓ クラウドから取得しました（' + new Date().toLocaleTimeString('ja-JP') + '）';
+    renderEntry(); renderDashboard();
+  }catch(e){
+    log.textContent = '取得に失敗しました: ' + e.message;
+  }
+}
+
+/* ============ backup export/import ============ */
+function exportJson(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `doujin-sales-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importJson(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!confirm('現在のデータを上書きして読み込みます。よろしいですか？')) return;
+      state = data;
+      saveState();
+      renderEntry(); renderDashboard();
+      alert('読み込みが完了しました。');
+    }catch(err){
+      alert('読み込みに失敗しました: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ============ init ============ */
+function updateHeaderSub(){
+  document.getElementById('headerSub').textContent = todayStr().replace(/-/g,'.') ;
+}
+updateHeaderSub();
+renderEntry();
+</script>
+</body>
+</html>
