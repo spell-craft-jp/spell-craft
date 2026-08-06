@@ -214,6 +214,49 @@
   .status-pill.ok{ background:var(--plus-dim); color:var(--plus); }
   .status-pill.err{ background:var(--minus-dim); color:var(--minus); }
 
+  .legend-note{ display:flex; align-items:center; gap:4px; font-size:10.5px; color:var(--muted); margin-top:8px; flex-wrap:wrap; }
+  .legend-note .dot{ width:10px; height:10px; border-radius:2px; display:inline-block; margin-right:2px; vertical-align:-1px; }
+  .legend-note .dot.bar{ background:#49d3ac; border-radius:2px; }
+  .legend-note .dot.line{ background:#e8c56c; border-radius:50%; }
+
+  .wd-name-btn{ background:none; border:none; padding:0; text-align:left; cursor:pointer; }
+  .wd-name-btn .wd-name{ color:var(--text); }
+  .wd-name-btn:active .wd-name{ color:var(--accent); }
+  .wd-ext-link{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:26px; height:26px; border-radius:8px; background:var(--surface3);
+    color:var(--muted); text-decoration:none; font-size:12px; flex-shrink:0;
+  }
+
+  .back-btn{
+    background:none; border:none; color:var(--accent); font-size:13px; font-weight:700;
+    padding:6px 2px 14px; -webkit-tap-highlight-color:transparent;
+  }
+  .wd-detail-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .wd-detail-name{ font-size:17px; font-weight:700; line-height:1.4; }
+  .wd-detail-link{
+    font-size:11.5px; color:var(--accent); text-decoration:none; white-space:nowrap; flex-shrink:0;
+    border:1px solid var(--border); padding:6px 10px; border-radius:20px;
+  }
+  .wd-detail-sub{ font-size:11.5px; color:var(--muted2); font-family:'JetBrains Mono',monospace; margin-top:6px; }
+
+  .wd-day-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:9px 0; border-bottom:1px solid var(--border); font-size:12.5px;
+  }
+  .wd-day-row:last-child{ border-bottom:none; }
+  .wd-day-row .d{ color:var(--muted); font-family:'JetBrains Mono',monospace; }
+  .wd-day-row .q{ font-family:'JetBrains Mono',monospace; font-weight:700; }
+  .wd-day-row .a{ font-family:'JetBrains Mono',monospace; color:var(--plus); font-weight:700; }
+
+  .privacy-toggle{
+    position:fixed; left:50%; transform:translateX(-50%); bottom:calc(64px + env(safe-area-inset-bottom)); z-index:25;
+    background:var(--surface3); border:1px solid var(--border); color:var(--muted);
+    font-size:11.5px; padding:8px 16px; border-radius:24px; display:flex; align-items:center; gap:6px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent;
+  }
+  .privacy-toggle.on{ background:var(--accent); color:#12141a; border-color:var(--accent); font-weight:700; }
+
   /* ---- bottom nav ---- */
   nav.bottom{
     position:fixed; bottom:0; left:0; right:0; z-index:30;
@@ -286,21 +329,63 @@
   <!-- ===== グラフ ===== -->
   <section class="screen" id="screen-charts">
     <div class="card">
-      <h2>日別売上推移</h2>
+      <h2>日別売上・販売数推移</h2>
       <div class="seg-group" id="rangeSeg">
-        <button data-range="14" class="active">直近14日</button>
+        <button data-range="7" class="active">直近7日</button>
+        <button data-range="14">直近14日</button>
         <button data-range="30">直近30日</button>
-        <button data-range="90">直近90日</button>
+        <button data-range="60">直近60日</button>
       </div>
       <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      <div class="legend-note"><span class="dot bar"></span>売上（卸・左軸）　<span class="dot line"></span>販売数（点・右軸）</div>
     </div>
     <div class="card">
-      <h2>作品別 累計売上構成</h2>
+      <h2>作品別 売上構成</h2>
+      <div class="seg-group" id="shareRangeSeg">
+        <button data-range="cum" class="active">累計</button>
+        <button data-range="7">直近7日</button>
+        <button data-range="14">直近14日</button>
+        <button data-range="30">直近30日</button>
+      </div>
       <div class="chart-wrap"><canvas id="shareChart"></canvas></div>
     </div>
     <div class="card">
       <h2>月別売上推移</h2>
       <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ===== 作品別分析（ダッシュボードから遷移） ===== -->
+  <section class="screen" id="screen-workdetail">
+    <button class="back-btn" onclick="closeWorkDetail()">‹ ダッシュボードに戻る</button>
+    <div class="card">
+      <div class="wd-detail-head">
+        <div class="wd-detail-name" id="wdName">—</div>
+        <a id="wdLink" href="#" target="_blank" rel="noopener" class="wd-detail-link" style="display:none;">作品ページを開く ↗</a>
+      </div>
+      <div class="wd-detail-sub" id="wdSub"></div>
+    </div>
+    <div class="stat-cards">
+      <div class="stat-card"><div class="l">当月販売点数</div><div class="v" id="wdMonthQty">0</div></div>
+      <div class="stat-card"><div class="l">当月卸売上</div><div class="v plus" id="wdMonthAmt">¥0</div></div>
+      <div class="stat-card"><div class="l">累計販売点数</div><div class="v" id="wdCumQty">0</div></div>
+      <div class="stat-card"><div class="l">累計卸売上</div><div class="v plus" id="wdCumAmt">¥0</div></div>
+    </div>
+    <div class="card">
+      <h2>日別販売数・売上</h2>
+      <div class="seg-group" id="wdRangeSeg">
+        <button data-range="7" class="active">直近7日</button>
+        <button data-range="14">直近14日</button>
+        <button data-range="30">直近30日</button>
+        <button data-range="60">直近60日</button>
+      </div>
+      <div class="chart-wrap"><canvas id="wdChart"></canvas></div>
+      <div class="legend-note"><span class="dot bar"></span>販売数（点・左軸）　<span class="dot line"></span>売上（卸・右軸）</div>
+    </div>
+    <div class="card">
+      <h2>販売履歴</h2>
+      <div id="wdDayList"></div>
+      <div class="empty" id="wdDayListEmpty" style="display:none;">この期間の販売実績はありません。</div>
     </div>
   </section>
 
@@ -352,6 +437,10 @@
 
 </main>
 
+<button id="privacyToggle" class="privacy-toggle" onclick="togglePrivacy()">
+  <span id="privacyIcon">🙈</span><span id="privacyLabel">作品名を隠す</span>
+</button>
+
 <nav class="bottom">
   <button class="active" data-screen="entry" onclick="showScreen('entry')"><span class="ico">✎</span>日計入力</button>
   <button data-screen="dash" onclick="showScreen('dash')"><span class="ico">▦</span>ダッシュボード</button>
@@ -363,9 +452,14 @@
 <script>
 /* ============ state ============ */
 const STORAGE_KEY = 'doujinSalesData_v1';
+const PRIVACY_KEY = 'doujinPrivacyMode_v1';
 let state = loadState();
-let trendChart, shareChart, monthChart;
-let currentRange = 14;
+let trendChart, shareChart, monthChart, wdChart;
+let currentRange = 7;
+let shareRange = 'cum';
+let detailRange = 7;
+let currentDetailWorkId = null;
+let privacyMode = localStorage.getItem(PRIVACY_KEY) === '1';
 
 function loadState(){
   try{
@@ -495,9 +589,13 @@ function renderEntry(){
 
     const row = document.createElement('div');
     row.className = 'work-row';
+    const dName = getDisplayName(w);
+    const nameHtml = (w.url && !privacyMode)
+      ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(dName)}<span class="link-ico">↗</span></a>`
+      : escapeHtml(dName);
     row.innerHTML = `
       <div class="row-main">
-        <div class="name">${w.url ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(w.name)}<span class="link-ico">↗</span></a>` : escapeHtml(w.name)}</div>
+        <div class="name">${nameHtml}</div>
         <div class="stepper">
           <button class="minus" onclick="stepQty('${w.id}',-1)">−</button>
           <div class="qty" id="qty-${w.id}">${qty}</div>
@@ -565,6 +663,38 @@ function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/* ============ privacy mode (hide work names when showing screen to others) ============ */
+function getPrivacyLabelMap(){
+  const sorted = [...state.works].sort((a,b)=>{
+    const da = a.releaseDate || '9999-99-99';
+    const db = b.releaseDate || '9999-99-99';
+    return da < db ? -1 : da > db ? 1 : 0;
+  });
+  const map = {};
+  sorted.forEach((w,i)=>{ map[w.id] = `${i+1}作目`; });
+  return map;
+}
+function getDisplayName(work){
+  if(!privacyMode) return work.name;
+  const map = getPrivacyLabelMap();
+  return map[work.id] || work.name;
+}
+function togglePrivacy(){
+  privacyMode = !privacyMode;
+  localStorage.setItem(PRIVACY_KEY, privacyMode ? '1' : '0');
+  const btn = document.getElementById('privacyToggle');
+  document.getElementById('privacyIcon').textContent = privacyMode ? '🙉' : '🙈';
+  document.getElementById('privacyLabel').textContent = privacyMode ? '作品名を表示' : '作品名を隠す';
+  btn.classList.toggle('on', privacyMode);
+  // re-render whatever is currently visible so names update immediately
+  renderEntry();
+  renderDashboard();
+  const chartsActive = document.getElementById('screen-charts').classList.contains('active');
+  if(chartsActive) renderCharts();
+  const detailActive = document.getElementById('screen-workdetail').classList.contains('active');
+  if(detailActive) renderWorkDetail();
+}
+
 /* ============ aggregation helpers ============ */
 function monthKey(dateStr){ return dateStr.slice(0,7); } // YYYY-MM
 
@@ -586,6 +716,19 @@ function aggregateForWork(workId){
   return { monthQty, monthAmt, cumQty, cumAmt };
 }
 
+// qty/amount for a work within the last N days, or all-time if days is null/'cum'
+function aggregateRangeForWork(workId, days){
+  let qty=0, amt=0;
+  const dates = (days && days!=='cum') ? lastNDates(Number(days)) : Object.keys(state.sales);
+  dates.forEach(dateStr=>{
+    const entry = state.sales[dateStr] && state.sales[dateStr][workId];
+    if(!entry || !entry.qty) return;
+    qty += entry.qty;
+    amt += entry.qty * (Number(entry.wholesale)||0);
+  });
+  return { qty, amt };
+}
+
 /* ============ dashboard ============ */
 function renderDashboard(){
   const container = document.getElementById('dashCards');
@@ -601,10 +744,17 @@ function renderDashboard(){
     sMonthQty+=a.monthQty; sMonthAmt+=a.monthAmt; sCumQty+=a.cumQty; sCumAmt+=a.cumAmt;
     const card = document.createElement('div');
     card.className = 'work-dash-card';
+    const dName = getDisplayName(w);
+    const extLink = (w.url && !privacyMode)
+      ? `<a class="wd-ext-link" href="${escapeHtml(w.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>`
+      : '';
     card.innerHTML = `
       <div class="wd-head">
-        <div class="wd-name">${w.url ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(w.name)}<span class="link-ico">↗</span></a>` : escapeHtml(w.name)}</div>
-        <div class="wd-date">${w.releaseDate || '—'}</div>
+        <button class="wd-name-btn" onclick="openWorkDetail('${w.id}')"><div class="wd-name">${escapeHtml(dName)}</div></button>
+        ${extLink}
+      </div>
+      <div class="wd-head" style="margin-top:-6px; margin-bottom:10px;">
+        <div class="wd-date">発売日 ${w.releaseDate || '—'}</div>
       </div>
       <div class="wd-grid">
         <div class="wd-stat"><span class="l">販売単価</span><span class="v">${yen(w.price)}</span></div>
@@ -636,6 +786,15 @@ document.getElementById('rangeSeg').addEventListener('click', (e)=>{
   renderCharts();
 });
 
+document.getElementById('shareRangeSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  document.querySelectorAll('#shareRangeSeg button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  shareRange = btn.dataset.range;
+  renderShareChart();
+});
+
 function renderCharts(){
   renderTrendChart();
   renderShareChart();
@@ -655,28 +814,40 @@ function lastNDates(n){
 
 function renderTrendChart(){
   const dates = lastNDates(currentRange);
-  const totals = dates.map(dt=>{
+  const revenueArr = [], qtyArr = [];
+  dates.forEach(dt=>{
     const day = state.sales[dt];
-    if(!day) return 0;
-    return Object.keys(day).reduce((sum,wid)=>{
-      const entry = day[wid];
-      if(!entry) return sum;
-      return sum + (entry.qty||0)*(Number(entry.wholesale)||0);
-    },0);
+    let rev = 0, qty = 0;
+    if(day){
+      Object.keys(day).forEach(wid=>{
+        const entry = day[wid];
+        if(!entry) return;
+        qty += entry.qty||0;
+        rev += (entry.qty||0)*(Number(entry.wholesale)||0);
+      });
+    }
+    revenueArr.push(rev);
+    qtyArr.push(qty);
   });
   const labels = dates.map(dt=>dt.slice(5).replace('-','/'));
 
   const ctx = document.getElementById('trendChart');
   if(trendChart) trendChart.destroy();
   trendChart = new Chart(ctx, {
-    type:'bar',
-    data:{ labels, datasets:[{ label:'売上', data: totals, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24 }]},
+    data:{
+      labels,
+      datasets:[
+        { type:'bar', label:'売上', data: revenueArr, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24, yAxisID:'y' },
+        { type:'line', label:'販売数', data: qtyArr, borderColor:'#e8c56c', backgroundColor:'#e8c56c', tension:0.3, pointRadius:3, pointBackgroundColor:'#e8c56c', yAxisID:'y1' }
+      ]
+    },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=>yen(c.raw) } } },
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=> c.dataset.yAxisID==='y1' ? `販売数: ${c.raw}点` : `売上: ${yen(c.raw)}` } } },
       scales:{
         x:{ ticks:{ color:'#8890a0', font:{size:10} }, grid:{ display:false } },
-        y:{ ticks:{ color:'#8890a0', font:{size:10}, callback:v=>'¥'+v.toLocaleString() }, grid:{ color:'#2c3140' } }
+        y:{ position:'left', ticks:{ color:'#8890a0', font:{size:10}, callback:v=>'¥'+v.toLocaleString() }, grid:{ color:'#2c3140' } },
+        y1:{ position:'right', beginAtZero:true, ticks:{ color:'#e8c56c', font:{size:10}, precision:0 }, grid:{ display:false } }
       }
     }
   });
@@ -685,8 +856,8 @@ function renderTrendChart(){
 function renderShareChart(){
   const labels = [], data = [];
   state.works.forEach(w=>{
-    const a = aggregateForWork(w.id);
-    if(a.cumAmt>0){ labels.push(w.name); data.push(a.cumAmt); }
+    const r = aggregateRangeForWork(w.id, shareRange);
+    if(r.amt>0){ labels.push(getDisplayName(w)); data.push(r.amt); }
   });
   const ctx = document.getElementById('shareChart');
   if(shareChart) shareChart.destroy();
@@ -735,6 +906,110 @@ function renderMonthChart(){
         y:{ ticks:{ color:'#8890a0', font:{size:10}, callback:v=>'¥'+v.toLocaleString() }, grid:{ color:'#2c3140' } }
       }
     }
+  });
+}
+
+/* ============ work detail (per-work sales analysis) ============ */
+function openWorkDetail(workId){
+  currentDetailWorkId = workId;
+  detailRange = 7;
+  document.querySelectorAll('#wdRangeSeg button').forEach(b=>b.classList.toggle('active', Number(b.dataset.range)===7));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-workdetail').classList.add('active');
+  renderWorkDetail();
+}
+function closeWorkDetail(){
+  currentDetailWorkId = null;
+  showScreen('dash');
+}
+
+const wdRangeSegEl = document.getElementById('wdRangeSeg');
+if(wdRangeSegEl){
+  wdRangeSegEl.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    document.querySelectorAll('#wdRangeSeg button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    detailRange = Number(btn.dataset.range);
+    renderWorkDetail();
+  });
+}
+
+function renderWorkDetail(){
+  const w = state.works.find(x=>x.id===currentDetailWorkId);
+  if(!w){ closeWorkDetail(); return; }
+
+  document.getElementById('wdName').textContent = getDisplayName(w);
+  document.getElementById('wdSub').textContent = `販売単価 ${yen(w.price)} ／ 基準卸単価 ${yen(w.wholesale)}`;
+  const linkEl = document.getElementById('wdLink');
+  if(w.url && !privacyMode){
+    linkEl.style.display = 'inline-block';
+    linkEl.href = w.url;
+  } else {
+    linkEl.style.display = 'none';
+  }
+
+  const a = aggregateForWork(w.id);
+  document.getElementById('wdMonthQty').textContent = a.monthQty;
+  document.getElementById('wdMonthAmt').textContent = yen(a.monthAmt);
+  document.getElementById('wdCumQty').textContent = a.cumQty;
+  document.getElementById('wdCumAmt').textContent = yen(a.cumAmt);
+
+  renderWdChart(w.id);
+  renderWdDayList(w.id);
+}
+
+function renderWdChart(workId){
+  const dates = lastNDates(detailRange);
+  const qtyArr = [], amtArr = [];
+  dates.forEach(dt=>{
+    const entry = state.sales[dt] && state.sales[dt][workId];
+    qtyArr.push(entry ? (entry.qty||0) : 0);
+    amtArr.push(entry ? (entry.qty||0)*(Number(entry.wholesale)||0) : 0);
+  });
+  const labels = dates.map(dt=>dt.slice(5).replace('-','/'));
+
+  const ctx = document.getElementById('wdChart');
+  if(wdChart) wdChart.destroy();
+  wdChart = new Chart(ctx, {
+    data:{
+      labels,
+      datasets:[
+        { type:'bar', label:'販売数', data: qtyArr, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24, yAxisID:'y' },
+        { type:'line', label:'売上', data: amtArr, borderColor:'#e8c56c', backgroundColor:'#e8c56c', tension:0.3, pointRadius:3, pointBackgroundColor:'#e8c56c', yAxisID:'y1' }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=> c.dataset.yAxisID==='y1' ? `売上: ${yen(c.raw)}` : `販売数: ${c.raw}点` } } },
+      scales:{
+        x:{ ticks:{ color:'#8890a0', font:{size:10} }, grid:{ display:false } },
+        y:{ position:'left', beginAtZero:true, ticks:{ color:'#49d3ac', font:{size:10}, precision:0 }, grid:{ color:'#2c3140' } },
+        y1:{ position:'right', beginAtZero:true, ticks:{ color:'#e8c56c', font:{size:10}, callback:v=>'¥'+v.toLocaleString() }, grid:{ display:false } }
+      }
+    }
+  });
+}
+
+function renderWdDayList(workId){
+  const list = document.getElementById('wdDayList');
+  const empty = document.getElementById('wdDayListEmpty');
+  const dates = lastNDates(detailRange).filter(dt=>{
+    const entry = state.sales[dt] && state.sales[dt][workId];
+    return entry && entry.qty>0;
+  }).sort((a,b)=> a<b?1:-1);
+
+  list.innerHTML = '';
+  if(dates.length===0){ empty.style.display='block'; }
+  else { empty.style.display='none'; }
+
+  dates.forEach(dt=>{
+    const entry = state.sales[dt][workId];
+    const amt = (entry.qty||0)*(Number(entry.wholesale)||0);
+    const row = document.createElement('div');
+    row.className = 'wd-day-row';
+    row.innerHTML = `<span class="d">${dt}</span><span class="q">${entry.qty}点</span><span class="a">${yen(amt)}</span>`;
+    list.appendChild(row);
   });
 }
 
@@ -888,7 +1163,14 @@ function importJson(evt){
 function updateHeaderSub(){
   document.getElementById('headerSub').textContent = todayStr().replace(/-/g,'.') ;
 }
+function initPrivacyToggle(){
+  const btn = document.getElementById('privacyToggle');
+  document.getElementById('privacyIcon').textContent = privacyMode ? '🙉' : '🙈';
+  document.getElementById('privacyLabel').textContent = privacyMode ? '作品名を表示' : '作品名を隠す';
+  btn.classList.toggle('on', privacyMode);
+}
 updateHeaderSub();
+initPrivacyToggle();
 renderEntry();
 </script>
 </body>
