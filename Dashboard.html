@@ -41,6 +41,7 @@
     backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
     padding:14px 18px 12px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
   }
   header.top .brand{
     display:flex; align-items:baseline; gap:8px;
@@ -56,6 +57,21 @@
   header.top .sub{
     font-size:11px; color:var(--muted2); margin-top:2px; letter-spacing:0.05em;
   }
+  .header-actions{ display:flex; gap:8px; flex-shrink:0; }
+  .header-icon-btn{
+    width:36px; height:36px; border-radius:10px; background:var(--surface2); border:1px solid var(--border);
+    color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:16px;
+    -webkit-tap-highlight-color:transparent; position:relative; padding:0;
+  }
+  .header-icon-btn.on{ background:var(--accent); border-color:var(--accent); color:#12141a; }
+  .header-icon-btn:active{ transform:scale(0.94); }
+  .toast{
+    position:fixed; top:64px; left:50%; transform:translateX(-50%); z-index:40;
+    background:var(--surface3); border:1px solid var(--border); color:var(--text);
+    font-size:12px; padding:9px 16px; border-radius:20px; box-shadow:0 4px 14px rgba(0,0,0,0.4);
+    opacity:0; pointer-events:none; transition:opacity .2s ease; white-space:nowrap; max-width:88vw; overflow:hidden; text-overflow:ellipsis;
+  }
+  .toast.show{ opacity:1; }
   main{ padding:16px; max-width:720px; margin:0 auto; }
   .screen{ display:none; animation:fadein .18s ease; }
   .screen.active{ display:block; }
@@ -249,14 +265,6 @@
   .wd-day-row .q{ font-family:'JetBrains Mono',monospace; font-weight:700; }
   .wd-day-row .a{ font-family:'JetBrains Mono',monospace; color:var(--plus); font-weight:700; }
 
-  .privacy-toggle{
-    position:fixed; left:50%; transform:translateX(-50%); bottom:calc(64px + env(safe-area-inset-bottom)); z-index:25;
-    background:var(--surface3); border:1px solid var(--border); color:var(--muted);
-    font-size:11.5px; padding:8px 16px; border-radius:24px; display:flex; align-items:center; gap:6px;
-    box-shadow:0 4px 14px rgba(0,0,0,0.35); -webkit-tap-highlight-color:transparent;
-  }
-  .privacy-toggle.on{ background:var(--accent); color:#12141a; border-color:var(--accent); font-weight:700; }
-
   /* ---- bottom nav ---- */
   nav.bottom{
     position:fixed; bottom:0; left:0; right:0; z-index:30;
@@ -280,9 +288,17 @@
 <body>
 
 <header class="top">
-  <div class="brand"><div class="mark"></div><h1>日計帳</h1></div>
-  <div class="sub" id="headerSub">SALES LEDGER</div>
+  <div>
+    <div class="brand"><div class="mark"></div><h1>日計帳</h1></div>
+    <div class="sub" id="headerSub">SALES LEDGER</div>
+  </div>
+  <div class="header-actions">
+    <button id="cloudSaveBtn" class="header-icon-btn" onclick="quickPushData()" title="クラウドに保存">☁️</button>
+    <button id="privacyToggle" class="header-icon-btn" onclick="togglePrivacy()" title="作品名を隠す"><span id="privacyIcon">🙈</span></button>
+  </div>
 </header>
+
+<div class="toast" id="toast"></div>
 
 <main>
 
@@ -436,10 +452,6 @@
   </section>
 
 </main>
-
-<button id="privacyToggle" class="privacy-toggle" onclick="togglePrivacy()">
-  <span id="privacyIcon">🙈</span><span id="privacyLabel">作品名を隠す</span>
-</button>
 
 <nav class="bottom">
   <button class="active" data-screen="entry" onclick="showScreen('entry')"><span class="ico">✎</span>日計入力</button>
@@ -684,8 +696,8 @@ function togglePrivacy(){
   localStorage.setItem(PRIVACY_KEY, privacyMode ? '1' : '0');
   const btn = document.getElementById('privacyToggle');
   document.getElementById('privacyIcon').textContent = privacyMode ? '🙉' : '🙈';
-  document.getElementById('privacyLabel').textContent = privacyMode ? '作品名を表示' : '作品名を隠す';
   btn.classList.toggle('on', privacyMode);
+  btn.title = privacyMode ? '作品名を表示' : '作品名を隠す';
   // re-render whatever is currently visible so names update immediately
   renderEntry();
   renderDashboard();
@@ -693,6 +705,44 @@ function togglePrivacy(){
   if(chartsActive) renderCharts();
   const detailActive = document.getElementById('screen-workdetail').classList.contains('active');
   if(detailActive) renderWorkDetail();
+}
+
+/* ============ toast + quick cloud save (header shortcut) ============ */
+let toastTimer;
+function showToast(msg, ms=2400){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), ms);
+}
+
+async function quickPushData(){
+  const { binId, apiKey } = state.sync || {};
+  if(!binId || !apiKey){
+    showToast('先に同期タブでBin ID・APIキーを設定してください');
+    showScreen('sync');
+    return;
+  }
+  const btn = document.getElementById('cloudSaveBtn');
+  btn.textContent = '⏳';
+  try{
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json', 'X-Master-Key': apiKey },
+      body: JSON.stringify({ works: state.works, sales: state.sales })
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    btn.textContent = '✅';
+    showToast('クラウドに保存しました');
+    const log = document.getElementById('syncLog');
+    if(log) log.textContent = '✓ クラウドに保存しました（' + new Date().toLocaleTimeString('ja-JP') + '）';
+  }catch(e){
+    btn.textContent = '⚠️';
+    showToast('保存に失敗しました: ' + e.message);
+  }finally{
+    setTimeout(()=>{ btn.textContent = '☁️'; }, 1600);
+  }
 }
 
 /* ============ aggregation helpers ============ */
@@ -837,13 +887,20 @@ function renderTrendChart(){
     data:{
       labels,
       datasets:[
-        { type:'bar', label:'売上', data: revenueArr, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24, yAxisID:'y' },
-        { type:'line', label:'販売数', data: qtyArr, borderColor:'#e8c56c', backgroundColor:'#e8c56c', tension:0.3, pointRadius:3, pointBackgroundColor:'#e8c56c', yAxisID:'y1' }
+        { type:'bar', label:'売上', data: revenueArr, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24, yAxisID:'y', order:1 },
+        { type:'line', label:'販売数', data: qtyArr, borderColor:'#e8c56c', backgroundColor:'#e8c56c', borderWidth:2.5, tension:0.3, pointRadius:3.5, pointBackgroundColor:'#e8c56c', yAxisID:'y1', order:2 }
       ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=> c.dataset.yAxisID==='y1' ? `販売数: ${c.raw}点` : `売上: ${yen(c.raw)}` } } },
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          mode:'index', intersect:false,
+          callbacks:{ label: c=> c.dataset.yAxisID==='y1' ? `販売数: ${c.raw}点` : `売上: ${yen(c.raw)}` }
+        }
+      },
       scales:{
         x:{ ticks:{ color:'#8890a0', font:{size:10} }, grid:{ display:false } },
         y:{ position:'left', ticks:{ color:'#8890a0', font:{size:10}, callback:v=>'¥'+v.toLocaleString() }, grid:{ color:'#2c3140' } },
@@ -975,13 +1032,20 @@ function renderWdChart(workId){
     data:{
       labels,
       datasets:[
-        { type:'bar', label:'販売数', data: qtyArr, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24, yAxisID:'y' },
-        { type:'line', label:'売上', data: amtArr, borderColor:'#e8c56c', backgroundColor:'#e8c56c', tension:0.3, pointRadius:3, pointBackgroundColor:'#e8c56c', yAxisID:'y1' }
+        { type:'bar', label:'販売数', data: qtyArr, backgroundColor:'#49d3ac', borderRadius:4, maxBarThickness:24, yAxisID:'y', order:1 },
+        { type:'line', label:'売上', data: amtArr, borderColor:'#e8c56c', backgroundColor:'#e8c56c', borderWidth:2.5, tension:0.3, pointRadius:3.5, pointBackgroundColor:'#e8c56c', yAxisID:'y1', order:2 }
       ]
     },
     options:{
       responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: c=> c.dataset.yAxisID==='y1' ? `売上: ${yen(c.raw)}` : `販売数: ${c.raw}点` } } },
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          mode:'index', intersect:false,
+          callbacks:{ label: c=> c.dataset.yAxisID==='y1' ? `売上: ${yen(c.raw)}` : `販売数: ${c.raw}点` }
+        }
+      },
       scales:{
         x:{ ticks:{ color:'#8890a0', font:{size:10} }, grid:{ display:false } },
         y:{ position:'left', beginAtZero:true, ticks:{ color:'#49d3ac', font:{size:10}, precision:0 }, grid:{ color:'#2c3140' } },
@@ -1166,7 +1230,7 @@ function updateHeaderSub(){
 function initPrivacyToggle(){
   const btn = document.getElementById('privacyToggle');
   document.getElementById('privacyIcon').textContent = privacyMode ? '🙉' : '🙈';
-  document.getElementById('privacyLabel').textContent = privacyMode ? '作品名を表示' : '作品名を隠す';
+  btn.title = privacyMode ? '作品名を表示' : '作品名を隠す';
   btn.classList.toggle('on', privacyMode);
 }
 updateHeaderSub();
