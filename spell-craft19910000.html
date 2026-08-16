@@ -1503,6 +1503,59 @@ function renderOutput() {
   }
 }
 
+// iOS Safari/Chrome(WebKit)ではnavigator.clipboardが使えない・失敗するケースがあるため、
+// execCommand('copy')によるフォールバックを用意した共通コピー関数
+function copyTextToClipboard(text) {
+  // Clipboard APIが使える場合はそちらを優先(HTTPS必須、非同期)
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  }
+  return fallbackCopy(text);
+}
+
+function fallbackCopy(text) {
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    // 画面外に配置しつつ、iOSでズームやスクロールが起きないようフォントサイズ等を調整
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '0';
+    ta.style.width = '1px';
+    ta.style.height = '1px';
+    ta.style.padding = '0';
+    ta.style.border = 'none';
+    ta.style.outline = 'none';
+    ta.style.boxShadow = 'none';
+    ta.style.background = 'transparent';
+    ta.style.fontSize = '16px';
+    ta.setAttribute('readonly', '');
+    document.body.appendChild(ta);
+
+    const selection = document.getSelection();
+    const originalRange = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+    ta.contentEditable = 'true';
+    ta.readOnly = false;
+    const range = document.createRange();
+    range.selectNodeContents(ta);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    ta.setSelectionRange(0, text.length);
+
+    try {
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (originalRange) { selection.removeAllRanges(); selection.addRange(originalRange); }
+      ok ? resolve() : reject(new Error('execCommand copy failed'));
+    } catch (err) {
+      document.body.removeChild(ta);
+      if (originalRange) { selection.removeAllRanges(); selection.addRange(originalRange); }
+      reject(err);
+    }
+  });
+}
+
 function makeOutputBlock(label, text, cls, color) {
   const b = document.createElement('div'); b.className = 'output-block';
   b.style.borderColor = color + '30';
@@ -1515,12 +1568,14 @@ function makeOutputBlock(label, text, cls, color) {
   `;
   const btn = b.querySelector('.copy-btn');
   btn.addEventListener('click', () => {
-    navigator.clipboard.writeText(text).then(() => {
+    copyTextToClipboard(text).then(() => {
       btn.classList.add('done'); btn.textContent = '✓ コピー済み！';
       const tid = setTimeout(() => {
         if (btn.isConnected) { btn.classList.remove('done'); btn.textContent = '📋 コピー'; }
         clearTimeout(tid);
       }, 2000);
+    }).catch(() => {
+      if (typeof showToast === 'function') showToast('⚠️ コピーに失敗しました。テキストを長押しして手動コピーしてください');
     });
   });
   return b;
