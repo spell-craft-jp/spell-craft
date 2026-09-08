@@ -92,6 +92,11 @@
 
   /* ---- date entry ---- */
   .date-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .month-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .month-row input[type=month]{
+    flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    font-family:'JetBrains Mono', monospace; font-size:15px; padding:10px 12px; border-radius:10px;
+  }
   .date-row input[type=date]{
     flex:1; background:var(--surface2); border:1px solid var(--border); color:var(--text);
     font-family:'JetBrains Mono', monospace; font-size:15px; padding:10px 12px; border-radius:10px;
@@ -136,6 +141,28 @@
     padding:2px 4px; display:none;
   }
   .row-sub .reset-price.show{ display:inline; }
+
+  .extra-lines{ margin-top:6px; }
+  .extra-line-row{
+    display:flex; align-items:center; gap:6px; margin-top:6px;
+    background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:6px 8px;
+  }
+  .extra-line-row .plabel{ font-size:10px; color:var(--muted2); flex-shrink:0; }
+  .extra-line-row .price-input{
+    background:var(--surface3); border:1px solid var(--border); color:var(--accent);
+    font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700;
+    width:72px; padding:5px 6px; border-radius:8px; flex-shrink:0;
+  }
+  .stepper.small{ transform:scale(0.88); transform-origin:left center; margin-left:-4px; }
+  .remove-line-btn{
+    margin-left:auto; background:none; border:none; color:var(--minus);
+    font-size:16px; line-height:1; padding:4px 6px; flex-shrink:0;
+  }
+  .add-price-btn{
+    display:block; width:100%; margin-top:8px; background:none; border:1px dashed var(--muted2);
+    color:var(--muted); font-size:11px; padding:7px; border-radius:9px; -webkit-tap-highlight-color:transparent;
+  }
+  .wd-line-detail{ font-size:10px; color:var(--muted2); font-weight:400; }
   .stepper{ display:flex; align-items:center; gap:0; }
   .stepper button{
     width:38px; height:38px; border-radius:10px; border:1px solid var(--border);
@@ -329,9 +356,14 @@
 
   <!-- ===== ダッシュボード ===== -->
   <section class="screen" id="screen-dash">
+    <div class="month-row">
+      <button class="date-nav-btn" onclick="shiftDashMonth(-1)">‹</button>
+      <input type="month" id="dashMonthInput">
+      <button class="date-nav-btn" onclick="shiftDashMonth(1)">›</button>
+    </div>
     <div class="stat-cards">
-      <div class="stat-card"><div class="l">当月合計販売点数</div><div class="v" id="mSumQty">0</div></div>
-      <div class="stat-card"><div class="l">当月合計卸売上</div><div class="v plus" id="mSumAmt">¥0</div></div>
+      <div class="stat-card"><div class="l" id="mSumQtyLabel">選択月 販売点数</div><div class="v" id="mSumQty">0</div></div>
+      <div class="stat-card"><div class="l" id="mSumAmtLabel">選択月 卸売上</div><div class="v plus" id="mSumAmt">¥0</div></div>
       <div class="stat-card"><div class="l">累計販売点数</div><div class="v" id="cSumQty">0</div></div>
       <div class="stat-card"><div class="l">累計卸売上</div><div class="v plus" id="cSumAmt">¥0</div></div>
     </div>
@@ -472,6 +504,7 @@ let currentRange = 7;
 let shareRange = 'cum';
 let detailRange = 7;
 let currentDetailWorkId = null;
+let dashMonth = null; // set on init to the current calendar month (YYYY-MM)
 let privacyMode = localStorage.getItem(PRIVACY_KEY) === '1';
 
 function loadState(){
@@ -492,19 +525,24 @@ function loadState(){
   };
 }
 
-// Older versions stored sales[date][workId] as a plain number (qty only).
-// New format stores { qty, wholesale } so each entry keeps the unit price
-// that was actually in effect that day, even if the work's default price
-// changes later (e.g. temporary discounts).
+// Sales entries have gone through a few formats over time:
+//  v1: sales[date][workId] = <number>                         (qty only)
+//  v2: sales[date][workId] = { qty, wholesale }                (single price/day)
+//  v3: sales[date][workId] = { lines: [{ price, qty }, ...] }  (current — supports
+//      the same work selling at two different prices on the same day, e.g. a
+//      same-day discount alongside regular-price sales)
 function migrateSalesFormat(data){
   if(!data.sales) return;
   Object.keys(data.sales).forEach(dateStr=>{
     const day = data.sales[dateStr];
     Object.keys(day).forEach(workId=>{
       const entry = day[workId];
+      const w = (data.works||[]).find(x=>x.id===workId);
+      const defaultPrice = w ? Number(w.wholesale)||0 : 0;
       if(typeof entry === 'number'){
-        const w = (data.works||[]).find(x=>x.id===workId);
-        day[workId] = { qty: entry, wholesale: w ? Number(w.wholesale)||0 : 0 };
+        day[workId] = { lines: [{ price: defaultPrice, qty: entry }] };
+      } else if(entry && !entry.lines){
+        day[workId] = { lines: [{ price: Number(entry.wholesale)||defaultPrice, qty: entry.qty||0 }] };
       }
     });
   });
@@ -547,42 +585,76 @@ function shiftDate(delta){
   renderEntry();
 }
 
-function getEntry(dateStr, workId){
-  const e = state.sales[dateStr] && state.sales[dateStr][workId];
-  return e || null;
+/* ============ dashboard month picker ============ */
+const dashMonthInput = document.getElementById('dashMonthInput');
+dashMonth = monthKey(todayStr());
+dashMonthInput.value = dashMonth;
+dashMonthInput.addEventListener('change', ()=>{
+  if(dashMonthInput.value){ dashMonth = dashMonthInput.value; renderDashboard(); }
+});
+function shiftDashMonth(delta){
+  const [y,m] = dashMonth.split('-').map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  dashMonth = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  dashMonthInput.value = dashMonth;
+  renderDashboard();
 }
-// Effective wholesale price for this work on this date: the price captured
-// when this date's entry was first created, or the work's current default
-// wholesale price if nothing has been recorded yet for this date.
-function getEffectivePrice(dateStr, workId){
-  const entry = getEntry(dateStr, workId);
-  if(entry) return Number(entry.wholesale)||0;
+
+function defaultPriceFor(workId){
   const w = state.works.find(x=>x.id===workId);
   return w ? Number(w.wholesale)||0 : 0;
 }
-function getQty(dateStr, workId){
-  const entry = getEntry(dateStr, workId);
-  return entry ? entry.qty : 0;
+// Read-only: returns the price lines for a work on a date without writing
+// anything to state. If nothing has been recorded yet, returns a single
+// virtual line at the work's default price so the UI has something to show.
+function peekLines(dateStr, workId){
+  const day = state.sales[dateStr];
+  const rec = day && day[workId];
+  if(rec && rec.lines && rec.lines.length>0) return rec.lines;
+  return [{ price: defaultPriceFor(workId), qty:0 }];
 }
-function ensureEntry(dateStr, workId){
+// Mutating: guarantees state.sales[date][workId].lines exists (with at least
+// one line) and returns it, so callers can push/splice/edit safely.
+function ensureLines(dateStr, workId){
   if(!state.sales[dateStr]) state.sales[dateStr] = {};
-  if(!state.sales[dateStr][workId]){
-    const w = state.works.find(x=>x.id===workId);
-    state.sales[dateStr][workId] = { qty:0, wholesale: w ? Number(w.wholesale)||0 : 0 };
+  if(!state.sales[dateStr][workId] || !state.sales[dateStr][workId].lines || state.sales[dateStr][workId].lines.length===0){
+    state.sales[dateStr][workId] = { lines: [{ price: defaultPriceFor(workId), qty:0 }] };
   }
-  return state.sales[dateStr][workId];
+  return state.sales[dateStr][workId].lines;
 }
-function setQty(dateStr, workId, qty){
-  if(qty < 0) qty = 0;
-  const entry = ensureEntry(dateStr, workId);
-  entry.qty = qty;
+function getWorkDayTotals(dateStr, workId){
+  const lines = peekLines(dateStr, workId);
+  let qty=0, amt=0;
+  lines.forEach(l=>{ qty += l.qty||0; amt += (l.qty||0)*(Number(l.price)||0); });
+  return { qty, amt };
+}
+function setLineQty(dateStr, workId, idx, qty){
+  if(qty<0) qty=0;
+  const lines = ensureLines(dateStr, workId);
+  if(!lines[idx]) lines[idx] = { price: defaultPriceFor(workId), qty:0 };
+  lines[idx].qty = qty;
   saveState();
 }
-function setPriceForDate(dateStr, workId, price){
-  const entry = ensureEntry(dateStr, workId);
-  entry.wholesale = Number(price)||0;
+function setLinePrice(dateStr, workId, idx, price){
+  const lines = ensureLines(dateStr, workId);
+  if(!lines[idx]) lines[idx] = { price:0, qty:0 };
+  lines[idx].price = Number(price)||0;
   saveState();
 }
+function addPriceLine(dateStr, workId){
+  const lines = ensureLines(dateStr, workId);
+  lines.push({ price: defaultPriceFor(workId), qty:0 });
+  saveState();
+  renderEntry();
+}
+function removePriceLine(dateStr, workId, idx){
+  const lines = ensureLines(dateStr, workId);
+  if(idx===0 || !lines[idx]) return; // the primary line can't be removed
+  lines.splice(idx,1);
+  saveState();
+  renderEntry();
+}
+
 
 function renderEntry(){
   const dateStr = entryDateInput.value;
@@ -594,11 +666,10 @@ function renderEntry(){
 
   let totalQty = 0, totalAmt = 0;
   state.works.forEach(w=>{
-    const qty = getQty(dateStr, w.id);
-    const price = getEffectivePrice(dateStr, w.id);
-    const isCustom = price !== (Number(w.wholesale)||0);
-    totalQty += qty;
-    totalAmt += qty * price;
+    const lines = peekLines(dateStr, w.id);
+    const t = getWorkDayTotals(dateStr, w.id);
+    totalQty += t.qty;
+    totalAmt += t.amt;
 
     const row = document.createElement('div');
     row.className = 'work-row';
@@ -607,6 +678,26 @@ function renderEntry(){
       ? `<a href="${escapeHtml(w.url)}" target="_blank" rel="noopener">${escapeHtml(dName)}<span class="link-ico">↗</span></a>`
       : escapeHtml(dName);
     const cumQty = aggregateForWork(w.id).cumQty;
+
+    const line0 = lines[0];
+    const isCustom0 = (Number(line0.price)||0) !== (Number(w.wholesale)||0);
+
+    let extraHtml = '';
+    for(let idx=1; idx<lines.length; idx++){
+      const line = lines[idx];
+      extraHtml += `
+        <div class="extra-line-row">
+          <span class="plabel">単価</span>
+          <input type="number" class="price-input" id="price-${w.id}-${idx}" value="${line.price}" onchange="onLinePriceInput('${w.id}',${idx},this.value)">
+          <div class="stepper small">
+            <button class="minus" onclick="stepLineQty('${w.id}',${idx},-1)">−</button>
+            <div class="qty" id="qty-${w.id}-${idx}">${line.qty}</div>
+            <button class="plus" onclick="stepLineQty('${w.id}',${idx},1)">＋</button>
+          </div>
+          <button class="remove-line-btn" onclick="removePriceLine('${dateStr}','${w.id}',${idx})">×</button>
+        </div>`;
+    }
+
     row.innerHTML = `
       <div class="row-main">
         <div>
@@ -614,17 +705,19 @@ function renderEntry(){
           <div class="cum-badge" id="cum-${w.id}">累計 ${cumQty}点</div>
         </div>
         <div class="stepper">
-          <button class="minus" onclick="stepQty('${w.id}',-1)">−</button>
-          <div class="qty" id="qty-${w.id}">${qty}</div>
-          <button class="plus" onclick="stepQty('${w.id}',1)">＋</button>
+          <button class="minus" onclick="stepLineQty('${w.id}',0,-1)">−</button>
+          <div class="qty" id="qty-${w.id}-0">${line0.qty}</div>
+          <button class="plus" onclick="stepLineQty('${w.id}',0,1)">＋</button>
         </div>
       </div>
       <div class="row-sub">
         <span class="plabel">卸単価</span>
-        <input type="number" class="price-input${isCustom ? ' custom' : ''}" id="price-${w.id}"
-          value="${price}" onchange="onPriceInput('${w.id}', this.value)">
-        <button class="reset-price${isCustom ? ' show' : ''}" id="reset-${w.id}" onclick="resetPriceForDate('${w.id}')">既定に戻す</button>
+        <input type="number" class="price-input${isCustom0 ? ' custom' : ''}" id="price-${w.id}-0"
+          value="${line0.price}" onchange="onLinePriceInput('${w.id}',0,this.value)">
+        <button class="reset-price${isCustom0 ? ' show' : ''}" id="reset-${w.id}-0" onclick="resetLinePrice('${w.id}',0)">既定に戻す</button>
       </div>
+      <div class="extra-lines">${extraHtml}</div>
+      <button class="add-price-btn" onclick="addPriceLine('${dateStr}','${w.id}')">＋ 別の値段で追加</button>
     `;
     list.appendChild(row);
   });
@@ -633,35 +726,41 @@ function renderEntry(){
   document.getElementById('todayAmount').textContent = yen(totalAmt);
 }
 
-function stepQty(workId, delta){
+function stepLineQty(workId, idx, delta){
   const dateStr = entryDateInput.value;
-  const cur = getQty(dateStr, workId);
+  const lines = peekLines(dateStr, workId);
+  const cur = (lines[idx] && lines[idx].qty) || 0;
   const next = Math.max(0, cur + delta);
-  setQty(dateStr, workId, next);
-  document.getElementById('qty-'+workId).textContent = next;
+  setLineQty(dateStr, workId, idx, next);
+  const qtyEl = document.getElementById(`qty-${workId}-${idx}`);
+  if(qtyEl) qtyEl.textContent = next;
   const cumBadge = document.getElementById('cum-'+workId);
   if(cumBadge) cumBadge.textContent = `累計 ${aggregateForWork(workId).cumQty}点`;
   recalcTodayTotals();
 }
 
-function onPriceInput(workId, value){
+function onLinePriceInput(workId, idx, value){
   const dateStr = entryDateInput.value;
-  setPriceForDate(dateStr, workId, value);
-  const w = state.works.find(x=>x.id===workId);
-  const isCustom = (Number(value)||0) !== (Number(w.wholesale)||0);
-  document.getElementById('reset-'+workId).classList.toggle('show', isCustom);
-  document.getElementById('price-'+workId).classList.toggle('custom', isCustom);
+  setLinePrice(dateStr, workId, idx, value);
+  if(idx===0){
+    const w = state.works.find(x=>x.id===workId);
+    const isCustom = (Number(value)||0) !== (Number(w.wholesale)||0);
+    const resetBtn = document.getElementById('reset-'+workId+'-0');
+    if(resetBtn) resetBtn.classList.toggle('show', isCustom);
+    const priceEl = document.getElementById('price-'+workId+'-0');
+    if(priceEl) priceEl.classList.toggle('custom', isCustom);
+  }
   recalcTodayTotals();
 }
 
-function resetPriceForDate(workId){
+function resetLinePrice(workId, idx){
   const dateStr = entryDateInput.value;
-  const w = state.works.find(x=>x.id===workId);
-  const defaultPrice = w ? Number(w.wholesale)||0 : 0;
-  setPriceForDate(dateStr, workId, defaultPrice);
-  document.getElementById('price-'+workId).value = defaultPrice;
-  document.getElementById('price-'+workId).classList.remove('custom');
-  document.getElementById('reset-'+workId).classList.remove('show');
+  const defaultPrice = defaultPriceFor(workId);
+  setLinePrice(dateStr, workId, idx, defaultPrice);
+  const priceEl = document.getElementById(`price-${workId}-${idx}`);
+  if(priceEl){ priceEl.value = defaultPrice; priceEl.classList.remove('custom'); }
+  const resetBtn = document.getElementById(`reset-${workId}-${idx}`);
+  if(resetBtn) resetBtn.classList.remove('show');
   recalcTodayTotals();
 }
 
@@ -669,10 +768,9 @@ function recalcTodayTotals(){
   const dateStr = entryDateInput.value;
   let totalQty = 0, totalAmt = 0;
   state.works.forEach(w=>{
-    const q = getQty(dateStr, w.id);
-    const price = getEffectivePrice(dateStr, w.id);
-    totalQty += q;
-    totalAmt += q * price;
+    const t = getWorkDayTotals(dateStr, w.id);
+    totalQty += t.qty;
+    totalAmt += t.amt;
   });
   document.getElementById('todayQty').innerHTML = `${totalQty}<span class="unit">点</span>`;
   document.getElementById('todayAmount').textContent = yen(totalAmt);
@@ -755,19 +853,19 @@ async function quickPushData(){
 /* ============ aggregation helpers ============ */
 function monthKey(dateStr){ return dateStr.slice(0,7); } // YYYY-MM
 
-function aggregateForWork(workId){
-  const curMonth = monthKey(todayStr());
+// monthQty/monthAmt are for targetMonth (defaults to the current calendar
+// month) so the dashboard can look back at past months, not just "this month".
+function aggregateForWork(workId, targetMonth){
+  const curMonth = targetMonth || monthKey(todayStr());
   let monthQty=0, monthAmt=0, cumQty=0, cumAmt=0;
   Object.keys(state.sales).forEach(dateStr=>{
-    const entry = state.sales[dateStr][workId];
-    if(!entry || !entry.qty) return;
-    const qty = entry.qty;
-    const price = Number(entry.wholesale)||0; // price actually in effect that day
-    cumQty += qty;
-    cumAmt += qty*price;
+    const t = getWorkDayTotals(dateStr, workId);
+    if(!t.qty) return;
+    cumQty += t.qty;
+    cumAmt += t.amt;
     if(monthKey(dateStr) === curMonth){
-      monthQty += qty;
-      monthAmt += qty*price;
+      monthQty += t.qty;
+      monthAmt += t.amt;
     }
   });
   return { monthQty, monthAmt, cumQty, cumAmt };
@@ -778,10 +876,9 @@ function aggregateRangeForWork(workId, days){
   let qty=0, amt=0;
   const dates = (days && days!=='cum') ? lastNDates(Number(days)) : Object.keys(state.sales);
   dates.forEach(dateStr=>{
-    const entry = state.sales[dateStr] && state.sales[dateStr][workId];
-    if(!entry || !entry.qty) return;
-    qty += entry.qty;
-    amt += entry.qty * (Number(entry.wholesale)||0);
+    const t = getWorkDayTotals(dateStr, workId);
+    qty += t.qty;
+    amt += t.amt;
   });
   return { qty, amt };
 }
@@ -794,10 +891,14 @@ function renderDashboard(){
   if(state.works.length===0){ empty.style.display='block'; }
   else{ empty.style.display='none'; }
 
+  const monthLabel = dashMonth.replace('-','年') + '月';
+  document.getElementById('mSumQtyLabel').textContent = `${monthLabel} 販売点数`;
+  document.getElementById('mSumAmtLabel').textContent = `${monthLabel} 卸売上`;
+
   let sMonthQty=0,sMonthAmt=0,sCumQty=0,sCumAmt=0;
 
   state.works.forEach(w=>{
-    const a = aggregateForWork(w.id);
+    const a = aggregateForWork(w.id, dashMonth);
     sMonthQty+=a.monthQty; sMonthAmt+=a.monthAmt; sCumQty+=a.cumQty; sCumAmt+=a.cumAmt;
     const card = document.createElement('div');
     card.className = 'work-dash-card';
@@ -816,8 +917,8 @@ function renderDashboard(){
       <div class="wd-grid">
         <div class="wd-stat"><span class="l">販売単価</span><span class="v">${yen(w.price)}</span></div>
         <div class="wd-stat"><span class="l">基準卸単価</span><span class="v">${yen(w.wholesale)}</span></div>
-        <div class="wd-stat"><span class="l">当月点数</span><span class="v">${a.monthQty}</span></div>
-        <div class="wd-stat highlight"><span class="l">当月卸売上</span><span class="v">${yen(a.monthAmt)}</span></div>
+        <div class="wd-stat"><span class="l">${monthLabel}点数</span><span class="v">${a.monthQty}</span></div>
+        <div class="wd-stat highlight"><span class="l">${monthLabel}卸売上</span><span class="v">${yen(a.monthAmt)}</span></div>
         <div class="wd-stat"><span class="l">累計点数</span><span class="v">${a.cumQty}</span></div>
         <div class="wd-stat highlight"><span class="l">累計卸売上</span><span class="v">${yen(a.cumAmt)}</span></div>
       </div>
@@ -877,10 +978,9 @@ function renderTrendChart(){
     let rev = 0, qty = 0;
     if(day){
       Object.keys(day).forEach(wid=>{
-        const entry = day[wid];
-        if(!entry) return;
-        qty += entry.qty||0;
-        rev += (entry.qty||0)*(Number(entry.wholesale)||0);
+        const t = getWorkDayTotals(dt, wid);
+        qty += t.qty;
+        rev += t.amt;
       });
     }
     revenueArr.push(rev);
@@ -946,9 +1046,8 @@ function renderMonthChart(){
     const mk = monthKey(dateStr);
     const day = state.sales[dateStr];
     Object.keys(day).forEach(wid=>{
-      const entry = day[wid];
-      if(!entry) return;
-      monthTotals[mk] = (monthTotals[mk]||0) + (entry.qty||0)*(Number(entry.wholesale)||0);
+      const t = getWorkDayTotals(dateStr, wid);
+      monthTotals[mk] = (monthTotals[mk]||0) + t.amt;
     });
   });
   const months = Object.keys(monthTotals).sort().slice(-12);
@@ -1027,9 +1126,9 @@ function renderWdChart(workId){
   const dates = lastNDates(detailRange);
   const qtyArr = [], amtArr = [];
   dates.forEach(dt=>{
-    const entry = state.sales[dt] && state.sales[dt][workId];
-    qtyArr.push(entry ? (entry.qty||0) : 0);
-    amtArr.push(entry ? (entry.qty||0)*(Number(entry.wholesale)||0) : 0);
+    const t = getWorkDayTotals(dt, workId);
+    qtyArr.push(t.qty);
+    amtArr.push(t.amt);
   });
   const labels = dates.map(dt=>dt.slice(5).replace('-','/'));
 
@@ -1066,8 +1165,7 @@ function renderWdDayList(workId){
   const list = document.getElementById('wdDayList');
   const empty = document.getElementById('wdDayListEmpty');
   const dates = lastNDates(detailRange).filter(dt=>{
-    const entry = state.sales[dt] && state.sales[dt][workId];
-    return entry && entry.qty>0;
+    return getWorkDayTotals(dt, workId).qty > 0;
   }).sort((a,b)=> a<b?1:-1);
 
   list.innerHTML = '';
@@ -1075,11 +1173,16 @@ function renderWdDayList(workId){
   else { empty.style.display='none'; }
 
   dates.forEach(dt=>{
-    const entry = state.sales[dt][workId];
-    const amt = (entry.qty||0)*(Number(entry.wholesale)||0);
+    const lines = peekLines(dt, workId).filter(l=>l.qty>0);
+    const t = getWorkDayTotals(dt, workId);
     const row = document.createElement('div');
     row.className = 'wd-day-row';
-    row.innerHTML = `<span class="d">${dt}</span><span class="q">${entry.qty}点</span><span class="a">${yen(amt)}</span>`;
+    if(lines.length>1){
+      const detail = lines.map(l=>`${l.qty}点@${yen(l.price)}`).join(' + ');
+      row.innerHTML = `<span class="d">${dt}<br><span class="wd-line-detail">${detail}</span></span><span class="q">${t.qty}点</span><span class="a">${yen(t.amt)}</span>`;
+    } else {
+      row.innerHTML = `<span class="d">${dt}</span><span class="q">${t.qty}点</span><span class="a">${yen(t.amt)}</span>`;
+    }
     list.appendChild(row);
   });
 }
@@ -1193,6 +1296,7 @@ async function pullData(){
     const remote = json.record;
     if(remote.works) state.works = remote.works;
     if(remote.sales) state.sales = remote.sales;
+    migrateSalesFormat(state);
     saveState();
     log.textContent = '✓ クラウドから取得しました（' + new Date().toLocaleTimeString('ja-JP') + '）';
     renderEntry(); renderDashboard();
@@ -1219,6 +1323,7 @@ function importJson(evt){
     try{
       const data = JSON.parse(e.target.result);
       if(!confirm('現在のデータを上書きして読み込みます。よろしいですか？')) return;
+      migrateSalesFormat(data);
       state = data;
       saveState();
       renderEntry(); renderDashboard();
