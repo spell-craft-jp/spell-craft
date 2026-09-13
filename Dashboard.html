@@ -128,6 +128,10 @@
   .link-ico{ font-size:10px; color:var(--muted2); margin-left:3px; vertical-align:2px; }
   .work-row .price{ font-size:11px; color:var(--muted2); font-family:'JetBrains Mono',monospace; margin-top:2px;}
   .cum-badge{ font-size:10.5px; color:var(--muted2); font-family:'JetBrains Mono',monospace; margin-top:3px; }
+  .platform-badge{
+    display:inline-block; font-size:9.5px; font-weight:700; padding:1.5px 6px; border-radius:10px;
+    border:1px solid; letter-spacing:0.02em; margin-left:6px; vertical-align:1px;
+  }
   .row-sub{ display:flex; align-items:center; gap:6px; margin-top:8px; }
   .row-sub .plabel{ font-size:10.5px; color:var(--muted2); letter-spacing:0.02em; }
   .row-sub .price-input{
@@ -338,6 +342,12 @@
       <button class="date-nav-btn" onclick="shiftDate(1)">›</button>
     </div>
 
+    <div class="seg-group" id="entryPlatformSeg">
+      <button data-platform="all" class="active">合算</button>
+      <button data-platform="fanza">FANZA</button>
+      <button data-platform="pictspace">pictspace</button>
+    </div>
+
     <div class="today-total">
       <div>
         <div class="label">本日の販売点数</div>
@@ -360,6 +370,11 @@
       <button class="date-nav-btn" onclick="shiftDashMonth(-1)">‹</button>
       <input type="month" id="dashMonthInput">
       <button class="date-nav-btn" onclick="shiftDashMonth(1)">›</button>
+    </div>
+    <div class="seg-group" id="dashPlatformSeg">
+      <button data-platform="all" class="active">合算</button>
+      <button data-platform="fanza">FANZA</button>
+      <button data-platform="pictspace">pictspace</button>
     </div>
     <div class="stat-cards">
       <div class="stat-card"><div class="l" id="mSumQtyLabel">選択月 販売点数</div><div class="v" id="mSumQty">0</div></div>
@@ -505,6 +520,12 @@ let shareRange = 'cum';
 let detailRange = 7;
 let currentDetailWorkId = null;
 let dashMonth = null; // set on init to the current calendar month (YYYY-MM)
+const PLATFORMS = {
+  fanza: { label: 'FANZA', color: '#f2795a' },
+  pictspace: { label: 'pictspace', color: '#7c9cf2' }
+};
+let entryPlatformFilter = 'all'; // 'all' | 'fanza' | 'pictspace'
+let dashPlatformFilter = 'all';
 let privacyMode = localStorage.getItem(PRIVACY_KEY) === '1';
 
 function loadState(){
@@ -513,16 +534,24 @@ function loadState(){
     if(raw){
       const parsed = JSON.parse(raw);
       migrateSalesFormat(parsed);
+      migrateWorksFormat(parsed);
       return parsed;
     }
   }catch(e){}
   return {
     works: [
-      { id: uid(), name: '放課後、恋をした。第1話', price: 980, wholesale: 686, releaseDate: '2025-09-01' }
+      { id: uid(), name: '放課後、恋をした。第1話', price: 980, wholesale: 686, releaseDate: '2025-09-01', platform: 'fanza' }
     ],
     sales: {},
     sync: { binId:'', apiKey:'' }
   };
+}
+
+// Works predate the platform field — default anything missing one to 'fanza'
+// (the platform this tool originally tracked) so existing data keeps working.
+function migrateWorksFormat(data){
+  if(!data.works) return;
+  data.works.forEach(w=>{ if(!w.platform) w.platform = 'fanza'; });
 }
 
 // Sales entries have gone through a few formats over time:
@@ -585,6 +614,15 @@ function shiftDate(delta){
   renderEntry();
 }
 
+document.getElementById('entryPlatformSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  document.querySelectorAll('#entryPlatformSeg button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  entryPlatformFilter = btn.dataset.platform;
+  renderEntry();
+});
+
 /* ============ dashboard month picker ============ */
 const dashMonthInput = document.getElementById('dashMonthInput');
 dashMonth = monthKey(todayStr());
@@ -599,6 +637,15 @@ function shiftDashMonth(delta){
   dashMonthInput.value = dashMonth;
   renderDashboard();
 }
+
+document.getElementById('dashPlatformSeg').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  document.querySelectorAll('#dashPlatformSeg button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  dashPlatformFilter = btn.dataset.platform;
+  renderDashboard();
+});
 
 function defaultPriceFor(workId){
   const w = state.works.find(x=>x.id===workId);
@@ -661,11 +708,12 @@ function renderEntry(){
   const list = document.getElementById('entryList');
   const empty = document.getElementById('entryEmpty');
   list.innerHTML = '';
-  if(state.works.length === 0){ empty.style.display='block'; }
+  const filteredWorks = state.works.filter(w => entryPlatformFilter==='all' || (w.platform||'fanza')===entryPlatformFilter);
+  if(filteredWorks.length === 0){ empty.style.display='block'; }
   else { empty.style.display='none'; }
 
   let totalQty = 0, totalAmt = 0;
-  state.works.forEach(w=>{
+  filteredWorks.forEach(w=>{
     const lines = peekLines(dateStr, w.id);
     const t = getWorkDayTotals(dateStr, w.id);
     totalQty += t.qty;
@@ -701,7 +749,7 @@ function renderEntry(){
     row.innerHTML = `
       <div class="row-main">
         <div>
-          <div class="name">${nameHtml}</div>
+          <div class="name">${nameHtml}${platformBadge(w)}</div>
           <div class="cum-badge" id="cum-${w.id}">累計 ${cumQty}点</div>
         </div>
         <div class="stepper">
@@ -767,11 +815,13 @@ function resetLinePrice(workId, idx){
 function recalcTodayTotals(){
   const dateStr = entryDateInput.value;
   let totalQty = 0, totalAmt = 0;
-  state.works.forEach(w=>{
-    const t = getWorkDayTotals(dateStr, w.id);
-    totalQty += t.qty;
-    totalAmt += t.amt;
-  });
+  state.works
+    .filter(w => entryPlatformFilter==='all' || (w.platform||'fanza')===entryPlatformFilter)
+    .forEach(w=>{
+      const t = getWorkDayTotals(dateStr, w.id);
+      totalQty += t.qty;
+      totalAmt += t.amt;
+    });
   document.getElementById('todayQty').innerHTML = `${totalQty}<span class="unit">点</span>`;
   document.getElementById('todayAmount').textContent = yen(totalAmt);
 }
@@ -795,6 +845,10 @@ function getDisplayName(work){
   if(!privacyMode) return work.name;
   const map = getPrivacyLabelMap();
   return map[work.id] || work.name;
+}
+function platformBadge(work){
+  const p = PLATFORMS[work.platform] || PLATFORMS.fanza;
+  return `<span class="platform-badge" style="color:${p.color}; border-color:${p.color}77;">${p.label}</span>`;
 }
 function togglePrivacy(){
   privacyMode = !privacyMode;
@@ -888,7 +942,8 @@ function renderDashboard(){
   const container = document.getElementById('dashCards');
   const empty = document.getElementById('dashEmpty');
   container.innerHTML = '';
-  if(state.works.length===0){ empty.style.display='block'; }
+  const filteredWorks = state.works.filter(w => dashPlatformFilter==='all' || (w.platform||'fanza')===dashPlatformFilter);
+  if(filteredWorks.length===0){ empty.style.display='block'; }
   else{ empty.style.display='none'; }
 
   const monthLabel = dashMonth.replace('-','年') + '月';
@@ -897,7 +952,7 @@ function renderDashboard(){
 
   let sMonthQty=0,sMonthAmt=0,sCumQty=0,sCumAmt=0;
 
-  state.works.forEach(w=>{
+  filteredWorks.forEach(w=>{
     const a = aggregateForWork(w.id, dashMonth);
     sMonthQty+=a.monthQty; sMonthAmt+=a.monthAmt; sCumQty+=a.cumQty; sCumAmt+=a.cumAmt;
     const card = document.createElement('div');
@@ -908,7 +963,7 @@ function renderDashboard(){
       : '';
     card.innerHTML = `
       <div class="wd-head">
-        <button class="wd-name-btn" onclick="openWorkDetail('${w.id}')"><div class="wd-name">${escapeHtml(dName)}</div></button>
+        <button class="wd-name-btn" onclick="openWorkDetail('${w.id}')"><div class="wd-name">${escapeHtml(dName)}${platformBadge(w)}</div></button>
         ${extLink}
       </div>
       <div class="wd-head" style="margin-top:-6px; margin-bottom:10px;">
@@ -1102,7 +1157,7 @@ function renderWorkDetail(){
   const w = state.works.find(x=>x.id===currentDetailWorkId);
   if(!w){ closeWorkDetail(); return; }
 
-  document.getElementById('wdName').textContent = getDisplayName(w);
+  document.getElementById('wdName').innerHTML = `${escapeHtml(getDisplayName(w))}${platformBadge(w)}`;
   document.getElementById('wdSub').textContent = `販売単価 ${yen(w.price)} ／ 基準卸単価 ${yen(w.wholesale)}`;
   const linkEl = document.getElementById('wdLink');
   if(w.url && !privacyMode){
@@ -1194,12 +1249,19 @@ function renderWorksEdit(){
   state.works.forEach(w=>{
     const div = document.createElement('div');
     div.className = 'work-edit';
+    const platform = w.platform || 'fanza';
     div.innerHTML = `
       <div class="row-top">
         <input type="text" style="font-weight:700; font-size:13.5px; flex:1; margin-right:8px;" value="${escapeHtml(w.name)}" onchange="updateWork('${w.id}','name',this.value)">
         <button class="del-btn" onclick="deleteWork('${w.id}')">削除</button>
       </div>
       <div class="fields">
+        <div style="grid-column:1/-1;">
+          <label>販売プラットフォーム</label>
+          <select style="font-family:'Zen Kaku Gothic New'; width:100%; background:var(--surface3); border:1px solid var(--border); color:var(--text); padding:8px 9px; border-radius:8px; font-size:13px;" onchange="updateWork('${w.id}','platform',this.value)">
+            ${Object.keys(PLATFORMS).map(key=>`<option value="${key}" ${platform===key?'selected':''}>${PLATFORMS[key].label}</option>`).join('')}
+          </select>
+        </div>
         <div>
           <label>販売単価</label>
           <input type="number" value="${w.price}" onchange="updateWork('${w.id}','price',this.value)">
@@ -1222,7 +1284,7 @@ function renderWorksEdit(){
   });
 }
 function addWork(){
-  state.works.push({ id:uid(), name:'新しい作品', price:0, wholesale:0, releaseDate: todayStr(), url:'' });
+  state.works.push({ id:uid(), name:'新しい作品', price:0, wholesale:0, releaseDate: todayStr(), url:'', platform:'fanza' });
   saveState();
   renderWorksEdit();
 }
@@ -1231,6 +1293,7 @@ function updateWork(id, field, value){
   if(!w) return;
   w[field] = (field==='price'||field==='wholesale') ? Number(value) : value;
   saveState();
+  if(field==='platform'){ renderEntry(); }
 }
 function deleteWork(id){
   if(!confirm('この作品を削除しますか？（過去の日計データは残ります）')) return;
@@ -1297,6 +1360,7 @@ async function pullData(){
     if(remote.works) state.works = remote.works;
     if(remote.sales) state.sales = remote.sales;
     migrateSalesFormat(state);
+    migrateWorksFormat(state);
     saveState();
     log.textContent = '✓ クラウドから取得しました（' + new Date().toLocaleTimeString('ja-JP') + '）';
     renderEntry(); renderDashboard();
@@ -1324,6 +1388,7 @@ function importJson(evt){
       const data = JSON.parse(e.target.result);
       if(!confirm('現在のデータを上書きして読み込みます。よろしいですか？')) return;
       migrateSalesFormat(data);
+      migrateWorksFormat(data);
       state = data;
       saveState();
       renderEntry(); renderDashboard();
