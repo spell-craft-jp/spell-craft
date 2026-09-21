@@ -362,6 +362,14 @@ input{font-family:inherit;}
 }
 .save-status.show{ opacity:1; }
 .save-status.warn{ background:var(--danger-bg); color:#B91C1C; }
+.cloud-status{
+  position:fixed; top:64px; left:14px; z-index:25;
+  font-size:12px; font-weight:700; border-radius:999px; padding:6px 14px;
+  opacity:0; transition:opacity .3s; box-shadow:var(--shadow-sm);
+  background:#E6F0FF; color:#2B52B8;
+}
+.cloud-status.show{ opacity:1; }
+.cloud-status.error{ background:var(--danger-bg); color:#B91C1C; }
 .storage-banner{
   position:sticky; top:0; z-index:30;
   background:var(--danger-bg); color:#9B1C1C; border-bottom:1px solid #F3C9C9;
@@ -445,6 +453,7 @@ input{font-family:inherit;}
   この環境では自動保存が使えないようです。「データ」から書き出して手元に保存してください。
   <button id="storage-banner-close" aria-label="閉じる">×</button>
 </div>
+<div id="cloud-status" class="cloud-status"></div>
 <div id="save-status" class="save-status">保存しました</div>
 <div id="app"></div>
 <div id="modal-root"></div>
@@ -487,6 +496,89 @@ input{font-family:inherit;}
   function autoGrow(ta){
     ta.style.height='auto';
     ta.style.height = ta.scrollHeight + 'px';
+  }
+
+  /* ---------------- cloud sync (JSONBin.io) ----------------
+     APIキーがソースに含まれます。個人専用ツールのため許容範囲内です。 */
+  const JSONBIN_ID  = '6a705f75f5f4af5e29e44ee6';
+  const JSONBIN_KEY = '$2a$10$.uEEXick9Zf7Ctxt7VKrveSTbB7xLM1MSqPDVe1sG0Qhfn6sUnXwK';
+  const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_ID}`;
+
+  let cloudTimer = null;
+  function flashCloud(text, isError){
+    const el = document.getElementById('cloud-status');
+    el.textContent = text;
+    el.classList.toggle('error', !!isError);
+    el.classList.add('show');
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(()=> el.classList.remove('show'), isError ? 3000 : 1400);
+  }
+
+  async function cloudPull(){
+    try{
+      const res = await fetch(JSONBIN_URL + '/latest', {
+        headers:{ 'X-Master-Key': JSONBIN_KEY }
+      });
+      if(!res.ok) return null;
+      const json = await res.json();
+      return json.record || null;
+    }catch(e){ return null; }
+  }
+
+  async function cloudPush(){
+    try{
+      flashCloud('☁️ 同期中…');
+      const projects = await gatherAllProjects();
+      const backup = {
+        app:'namecraft', version:1, syncedAt: new Date().toISOString(),
+        library: state.library, projects
+      };
+      const res = await fetch(JSONBIN_URL, {
+        method:'PUT',
+        headers:{
+          'X-Master-Key': JSONBIN_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(backup)
+      });
+      if(res.ok){ flashCloud('☁️ 同期完了'); return true; }
+      else { flashCloud('☁️ 同期失敗', true); return false; }
+    }catch(e){
+      flashCloud('☁️ オフライン', true);
+      return false;
+    }
+  }
+
+  // debounced push — fires 2s after the last local save
+  const debouncedCloudPush = debounce(cloudPush, 2000);
+
+  async function mergeCloudIntoLocal(cloud){
+    if(!cloud || !Array.isArray(cloud.projects)) return false;
+    let changed = false;
+
+    // library: union
+    if(Array.isArray(cloud.library) && cloud.library.length){
+      const merged = Array.from(new Set([...state.library, ...cloud.library]));
+      if(merged.length !== state.library.length){
+        state.library = merged;
+        saveLibrary(state.library);
+        changed = true;
+      }
+    }
+
+    // projects: cloud wins if updatedAt is newer than local
+    for(const cloudProj of cloud.projects){
+      if(!cloudProj?.id) continue;
+      const localProj = await loadProject(cloudProj.id);
+      if(!localProj || (cloudProj.updatedAt||0) > (localProj.updatedAt||0)){
+        state.projectCache[cloudProj.id] = cloudProj;
+        safeSet('project:'+cloudProj.id, cloudProj);
+        upsertIndexEntry(cloudProj);
+        changed = true;
+      }
+    }
+    if(changed) await saveIndex(state.projectsIndex);
+    return changed;
   }
 
   /* ---------------- storage layer ----------------
@@ -550,6 +642,7 @@ input{font-family:inherit;}
     upsertIndexEntry(proj);
     const ok2 = await saveIndex(state.projectsIndex);
     if(ok1 && ok2) flashSaved(); else flashWarning('保存できませんでした');
+    debouncedCloudPush();
   }
   async function deleteProject(id){
     safeDelete('project:'+id);
@@ -1464,6 +1557,16 @@ input{font-family:inherit;}
     app.innerHTML = `<div class="app-header">${BRAND_HTML}</div><div class="screen"><div class="empty-state"><p>読み込み中…</p></div></div>`;
     state.projectsIndex = await loadIndex();
     state.library = await loadLibrary();
+
+    // cloud sync: pull and merge on startup
+    flashCloud('☁️ クラウドから取得中…');
+    const cloud = await cloudPull();
+    if(cloud){
+      const merged = await mergeCloudIntoLocal(cloud);
+      flashCloud(merged ? '☁️ クラウドと同期しました' : '☁️ 最新の状態です');
+    } else {
+      flashCloud('☁️ オフライン（ローカルデータを使用）', true);
+    }
 
     const lastId = await getLastProjectId();
     if(lastId && state.projectsIndex.some(p=>p.id===lastId)){
