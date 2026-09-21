@@ -514,17 +514,24 @@ input{font-family:inherit;}
      保存・読み込みともに手動でトリガーする（自動同期なし）。 */
 
   function getCloudCreds(){
-    return {
-      id:  safeGet('cloud-bin-id')  || '',
-      key: safeGet('cloud-master-key') || ''
-    };
+    try{
+      const id  = localStorage.getItem(KEY_PREFIX + 'cloud-bin-id')  || '';
+      const key = localStorage.getItem(KEY_PREFIX + 'cloud-master-key') || '';
+      return { id, key };
+    }catch(e){ return { id:'', key:'' }; }
   }
   function saveCloudCreds(id, key){
-    safeSet('cloud-bin-id', id);
-    safeSet('cloud-master-key', key);
+    try{
+      localStorage.setItem(KEY_PREFIX + 'cloud-bin-id', id);
+      localStorage.setItem(KEY_PREFIX + 'cloud-master-key', key);
+    }catch(e){}
   }
-  function getLastSyncTime(){ return safeGet('cloud-last-sync') || null; }
-  function setLastSyncTime(ts){ safeSet('cloud-last-sync', ts); }
+  function getLastSyncTime(){
+    try{ return localStorage.getItem(KEY_PREFIX + 'cloud-last-sync') || null; }catch(e){ return null; }
+  }
+  function setLastSyncTime(ts){
+    try{ localStorage.setItem(KEY_PREFIX + 'cloud-last-sync', ts); }catch(e){}
+  }
 
   function syncBarHTML(){
     const creds = getCloudCreds();
@@ -625,12 +632,16 @@ input{font-family:inherit;}
     openModal({
       title:'☁️ クラウド同期設定',
       bodyHTML:`
+        <p class="confirm-text" style="font-size:12.5px;margin-bottom:12px;">
+          ⚠️ <strong>日計帳と別のBinを使ってください。</strong>同じBinだと互いのデータを上書きします。<br>
+          <a href="https://jsonbin.io/" target="_blank" rel="noopener" style="color:var(--primary);">jsonbin.io</a> でログイン → "Create a Bin" → 空のJSONを保存 → BIN IDをコピー
+        </p>
         <div class="field-pair">
-          <label>Bin ID</label>
+          <label>Bin ID（ネームCraft専用）</label>
           <input class="text-input" id="cloud-bin-id-input" value="${esc(id)}" placeholder="例: 6a705f75f5f4af5e29e44ee6">
         </div>
         <div class="field-pair">
-          <label>X-Master-Key</label>
+          <label>X-Master-Key（日計帳と同じでOK）</label>
           <input class="text-input" id="cloud-key-input" value="${esc(key)}" placeholder="$2a$10$..." type="password">
         </div>`,
       footerHTML:`<button class="modal-primary-btn" id="cloud-settings-save">保存する</button>
@@ -643,7 +654,6 @@ input{font-family:inherit;}
           if(!newId || !newKey){ flashWarning('Bin IDとキーを入力してください'); return; }
           saveCloudCreds(newId, newKey);
           closeModal();
-          refreshSyncBar();
           // re-render sync bar
           const bar = document.getElementById('sync-bar');
           if(bar){ bar.outerHTML = syncBarHTML(); wireSyncBar(); }
