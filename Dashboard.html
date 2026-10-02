@@ -89,6 +89,16 @@
     font-size:13px; font-weight:700; color:var(--muted); margin:0 0 12px;
     letter-spacing:0.04em; text-transform:uppercase;
   }
+  .card-head-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;
+  }
+  .card-head-row h2{ margin:0; flex-shrink:0; }
+  .mini-btn{
+    background:var(--surface2); border:1px solid var(--border); color:var(--accent);
+    font-size:10.5px; padding:6px 10px; border-radius:16px; white-space:nowrap; flex-shrink:0;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mini-btn:active{ transform:scale(0.96); }
 
   /* ---- date entry ---- */
   .date-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
@@ -131,7 +141,11 @@
   .platform-badge{
     display:inline-block; font-size:9.5px; font-weight:700; padding:1.5px 6px; border-radius:10px;
     border:1px solid; letter-spacing:0.02em; margin-left:6px; vertical-align:1px;
+    text-decoration:none; -webkit-tap-highlight-color:transparent;
   }
+  .wd-badges{ display:flex; align-items:center; flex-shrink:0; gap:0; }
+  .wd-stat-sub{ display:block; font-size:8.5px; color:var(--muted); margin-top:2px; font-weight:500; line-height:1.3; }
+  .wd-stat.highlight .wd-stat-sub{ color:#9fe6d2; }
   .row-sub{ display:flex; align-items:center; gap:6px; margin-top:8px; }
   .row-sub .plabel{ font-size:10.5px; color:var(--muted2); letter-spacing:0.02em; }
   .row-sub .price-input{
@@ -357,7 +371,10 @@
     </div>
 
     <div class="card">
-      <h2>作品ごとの数量・卸単価</h2>
+      <div class="card-head-row">
+        <h2>作品ごとの数量・卸単価</h2>
+        <button class="mini-btn" onclick="applyYesterdayPrices()">↙ 昨日の単価を反映</button>
+      </div>
       <div id="entryList"></div>
       <div class="empty" id="entryEmpty" style="display:none;">作品が登録されていません。設定タブから追加してください。</div>
       <p class="note">金額は卸単価ベースで集計されます。値引きなどでその日だけ単価が変わる場合は、各作品の単価欄を直接書き換えてください（作品自体は同じものとして集計されます）。</p>
@@ -521,8 +538,8 @@ let detailRange = 7;
 let currentDetailWorkId = null;
 let dashMonth = null; // set on init to the current calendar month (YYYY-MM)
 const PLATFORMS = {
-  fanza: { label: 'FANZA', color: '#f2795a' },
-  pictspace: { label: 'pictspace', color: '#7c9cf2' }
+  fanza: { label: 'FANZA', short: 'FANZA', color: '#f2795a' },
+  pictspace: { label: 'pictspace', short: 'PS', color: '#7c9cf2' }
 };
 let entryPlatformFilter = 'all'; // 'all' | 'fanza' | 'pictspace'
 let dashPlatformFilter = 'all';
@@ -612,6 +629,28 @@ function shiftDate(delta){
   d.setDate(d.getDate()+delta);
   entryDateInput.value = fmtDate(d);
   renderEntry();
+}
+
+// Copies each visible work's primary-line price from the previous day's entry
+// (only for works that actually had a sale recorded that day), so a price
+// change doesn't have to be retyped every day it stays in effect.
+function applyYesterdayPrices(){
+  const dateStr = entryDateInput.value;
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  const prevDateStr = fmtDate(d);
+
+  const targets = state.works.filter(w => entryPlatformFilter==='all' || (w.platform||'fanza')===entryPlatformFilter);
+  let updated = 0;
+  targets.forEach(w=>{
+    const prevLines = peekLines(prevDateStr, w.id);
+    const hadData = prevLines.some(l=>l.qty>0);
+    if(!hadData) return;
+    setLinePrice(dateStr, w.id, 0, prevLines[0].price);
+    updated++;
+  });
+  renderEntry();
+  showToast(updated>0 ? `昨日（${prevDateStr}）の単価を${updated}件反映しました` : '昨日の販売データが見つかりませんでした');
 }
 
 document.getElementById('entryPlatformSeg').addEventListener('click', (e)=>{
@@ -831,14 +870,23 @@ function escapeHtml(s){
 }
 
 /* ============ privacy mode (hide work names when showing screen to others) ============ */
+// Works sharing the same title (e.g. the same title sold on both FANZA and
+// pictspace) are treated as one title for numbering, so both variants get
+// the same "N作目" label instead of being counted separately.
 function getPrivacyLabelMap(){
-  const sorted = [...state.works].sort((a,b)=>{
-    const da = a.releaseDate || '9999-99-99';
-    const db = b.releaseDate || '9999-99-99';
-    return da < db ? -1 : da > db ? 1 : 0;
+  const byName = {};
+  state.works.forEach(w=>{
+    const key = (w.name||'').trim();
+    if(!byName[key]) byName[key] = [];
+    byName[key].push(w);
   });
+  const groups = Object.keys(byName).map(key=>{
+    const earliest = byName[key].map(w=>w.releaseDate || '9999-99-99').sort()[0];
+    return { key, earliest, works: byName[key] };
+  });
+  groups.sort((a,b)=> a.earliest<b.earliest?-1:a.earliest>b.earliest?1:0);
   const map = {};
-  sorted.forEach((w,i)=>{ map[w.id] = `${i+1}作目`; });
+  groups.forEach((g,i)=>{ g.works.forEach(w=>{ map[w.id] = `${i+1}作目`; }); });
   return map;
 }
 function getDisplayName(work){
@@ -846,9 +894,16 @@ function getDisplayName(work){
   const map = getPrivacyLabelMap();
   return map[work.id] || work.name;
 }
+// A platform badge doubles as a link to that platform's page when the work
+// has a URL set (and names aren't hidden) — useful when the same title has
+// a different badge/link per platform.
 function platformBadge(work){
   const p = PLATFORMS[work.platform] || PLATFORMS.fanza;
-  return `<span class="platform-badge" style="color:${p.color}; border-color:${p.color}77;">${p.label}</span>`;
+  const style = `color:${p.color}; border-color:${p.color}77;`;
+  if(work.url && !privacyMode){
+    return `<a class="platform-badge" href="${escapeHtml(work.url)}" target="_blank" rel="noopener" style="${style}" onclick="event.stopPropagation()">${p.label} ↗</a>`;
+  }
+  return `<span class="platform-badge" style="${style}">${p.label}</span>`;
 }
 function togglePrivacy(){
   privacyMode = !privacyMode;
@@ -938,6 +993,20 @@ function aggregateRangeForWork(workId, days){
 }
 
 /* ============ dashboard ============ */
+// Works that share the exact same title (e.g. a work registered once for
+// FANZA and once for pictspace) are grouped together so the dashboard can
+// show one merged card for that title with its totals combined.
+function groupWorksForDashboard(works){
+  const groups = {};
+  const order = [];
+  works.forEach(w=>{
+    const key = (w.name||'').trim();
+    if(!groups[key]){ groups[key] = []; order.push(key); }
+    groups[key].push(w);
+  });
+  return order.map(key=>({ key, works: groups[key] }));
+}
+
 function renderDashboard(){
   const container = document.getElementById('dashCards');
   const empty = document.getElementById('dashEmpty');
@@ -951,31 +1020,46 @@ function renderDashboard(){
   document.getElementById('mSumAmtLabel').textContent = `${monthLabel} 卸売上`;
 
   let sMonthQty=0,sMonthAmt=0,sCumQty=0,sCumAmt=0;
+  const groups = groupWorksForDashboard(filteredWorks);
 
-  filteredWorks.forEach(w=>{
-    const a = aggregateForWork(w.id, dashMonth);
-    sMonthQty+=a.monthQty; sMonthAmt+=a.monthAmt; sCumQty+=a.cumQty; sCumAmt+=a.cumAmt;
+  groups.forEach(group=>{
+    const perWork = group.works.map(w=>({ w, a: aggregateForWork(w.id, dashMonth) }));
+    const monthQty = perWork.reduce((s,x)=>s+x.a.monthQty, 0);
+    const monthAmt = perWork.reduce((s,x)=>s+x.a.monthAmt, 0);
+    const cumQty = perWork.reduce((s,x)=>s+x.a.cumQty, 0);
+    const cumAmt = perWork.reduce((s,x)=>s+x.a.cumAmt, 0);
+    sMonthQty+=monthQty; sMonthAmt+=monthAmt; sCumQty+=cumQty; sCumAmt+=cumAmt;
+
+    const isMerged = group.works.length > 1;
+    const primary = group.works[0];
+    const dName = getDisplayName(primary);
+    const badgesHtml = group.works.map(w=>platformBadge(w)).join('');
+    const earliestDate = group.works.map(w=>w.releaseDate).filter(Boolean).sort()[0] || '—';
+
+    const priceCell = (field) => isMerged
+      ? `<span style="font-size:10px; line-height:1.4;">${perWork.map(x=>`${PLATFORMS[x.w.platform].short} ${yen(x.w[field])}`).join('<br>')}</span>`
+      : yen(primary[field]);
+    const subBreakdown = (valueFn) => isMerged
+      ? `<span class="wd-stat-sub">${perWork.map(x=>`${PLATFORMS[x.w.platform].short} ${valueFn(x.a)}`).join(' / ')}</span>`
+      : '';
+
     const card = document.createElement('div');
     card.className = 'work-dash-card';
-    const dName = getDisplayName(w);
-    const extLink = (w.url && !privacyMode)
-      ? `<a class="wd-ext-link" href="${escapeHtml(w.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a>`
-      : '';
     card.innerHTML = `
       <div class="wd-head">
-        <button class="wd-name-btn" onclick="openWorkDetail('${w.id}')"><div class="wd-name">${escapeHtml(dName)}${platformBadge(w)}</div></button>
-        ${extLink}
+        <button class="wd-name-btn" onclick="openWorkDetail('${primary.id}')"><div class="wd-name">${escapeHtml(dName)}</div></button>
+        <div class="wd-badges">${badgesHtml}</div>
       </div>
       <div class="wd-head" style="margin-top:-6px; margin-bottom:10px;">
-        <div class="wd-date">発売日 ${w.releaseDate || '—'}</div>
+        <div class="wd-date">発売日 ${earliestDate}</div>
       </div>
       <div class="wd-grid">
-        <div class="wd-stat"><span class="l">販売単価</span><span class="v">${yen(w.price)}</span></div>
-        <div class="wd-stat"><span class="l">基準卸単価</span><span class="v">${yen(w.wholesale)}</span></div>
-        <div class="wd-stat"><span class="l">${monthLabel}点数</span><span class="v">${a.monthQty}</span></div>
-        <div class="wd-stat highlight"><span class="l">${monthLabel}卸売上</span><span class="v">${yen(a.monthAmt)}</span></div>
-        <div class="wd-stat"><span class="l">累計点数</span><span class="v">${a.cumQty}</span></div>
-        <div class="wd-stat highlight"><span class="l">累計卸売上</span><span class="v">${yen(a.cumAmt)}</span></div>
+        <div class="wd-stat"><span class="l">販売単価</span><span class="v">${priceCell('price')}</span></div>
+        <div class="wd-stat"><span class="l">基準卸単価</span><span class="v">${priceCell('wholesale')}</span></div>
+        <div class="wd-stat"><span class="l">${monthLabel}点数</span><span class="v">${monthQty}</span>${subBreakdown(a=>`${a.monthQty}点`)}</div>
+        <div class="wd-stat highlight"><span class="l">${monthLabel}卸売上</span><span class="v">${yen(monthAmt)}</span>${subBreakdown(a=>yen(a.monthAmt))}</div>
+        <div class="wd-stat"><span class="l">累計点数</span><span class="v">${cumQty}</span>${subBreakdown(a=>`${a.cumQty}点`)}</div>
+        <div class="wd-stat highlight"><span class="l">累計卸売上</span><span class="v">${yen(cumAmt)}</span>${subBreakdown(a=>yen(a.cumAmt))}</div>
       </div>
     `;
     container.appendChild(card);
